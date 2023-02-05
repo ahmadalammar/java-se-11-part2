@@ -1,0 +1,70 @@
+############################# Migration to modular application #########################
+if a request is made to load a type in a package not defined in a module,
+the jvm attempts to load it from the class path.
+- if this success , the type gets classified as a member of a special module
+"the unnamed module", which allow legacy code to execute with modular jdk.
+
+- modular jar has a module descriptor class
+  module-info.class in its root directory.
+
+Automatic module:
+1- its name is the name of the jar file.
+2- its defined implicitly.
+3- every package in an automatic module is considered to be exported.
+4- an automatic module grants implied readability to all other automatic modules.
+5- automatic modules are able to access any public type loaded from the class path.
+
+There are two ways to migrate existing application to modules:
+1- bottom-up
+   start with jar files that have least amount of dependencies on non-java platform
+   packages, converting these to modular jar files.
+
+2- Top-down:
+   this approach puts all jar files on the module path, allowing them to be loaded
+   as automatic modules.
+
+--------------------------------------------
+question:
+
+Which of the following are NOT true about jdeps options?
+
+* A.  -apionly, which can also be represented as --api-only, restricts the analysis to the signature of public and protected members of public classes.
+
+* B.   --module-path, which can also be represented as -p, specifies the module path where the module jars can be found.  If you are specifying a list of jars, the list is semi-colon delimited.
+
+* C.  -recursive, which can also be represented as -R or -r, recursively traverses all run-time dependencies.
+
+* D.   -jdkinternals, which can also be represented a --jdk-internals, finds class-level dependencies in the JDK internal APIs.
+
+* E.   You can use jdeps against both modular and non-modular jars.
+
+* F.  All of the statements above are true.
+
+(B & C invalid statements)
+B would be a valid statement, except that -p is not an alternative to --module-path. -p is an alternative to --package or -package.
+ The same is true with C, which would be a valid statement except that -r is not an alternative to -recursive. -r is an unknown option.
+
+------------------------------------------------
+
+question:
+
+Which of the following are NOT true about modules in Java 11?
+
+* A.  You can run an application on Java 11 using a combination of both modular jars and non-modular jars.
+
+* B.   Classes loaded from the class path (in jars or individiually) get added to a module in the JVM called the unnamed module.
+
+* C.  A package can be in both the unnamed module and a named module, but the package in the unnamed module is ignored.
+
+* D.  The unnamed module can read every other module.
+
+* E.   An automatic module is the same as an unnamed module.
+
+* F.   Every package in an automatic module is considered to be exported.
+
+* G.  All of the statements above are correct
+
+(E invalid statement)
+his statement is not valid. Classes in a jar on the class path are loaded into the unnamed module.
+A jar that is loaded from the module path, which does not contain a module descriptor is loaded as an automatic module,
+and given a default name based on the jar name. All of it’s packages are considered exported.

@@ -1,0 +1,207 @@
+1- if u have nested static class and inside this class
+   u declare enum or interface then its static by default.
+
+2- if u have nested static class and inside this class
+   u have a method that tries to access instance
+   variable from outer class then its a compiler error.
+
+3- - u cant have static members inside non-static inner class...
+   - for static final FIELDS AND ONLY FIELDS its okay and no compiler errors....
+   - u cant add enum or interface to inner class as both enum and interface implicitly static...
+
+4- cant put static in local class, cant put interface or enum bcoz they also implicitly static..
+
+5- that even the constructor is private in local class we can still access it from within the method.....
+
+   void methodA() {
+     // cant put any access modifier in inner local class...
+     class inner {
+        private inner() {
+        }
+     }
+
+     inner i = new inner(); // OKAY....even tho the constructor is private but u still can access it...
+   }
+
+6- notice that method is static....
+public class Test {
+
+    String name="Alammar";
+
+    public static void main(String[] args) {
+        class A {
+            public void methodA() {
+                System.out.println("my name="+name); // cant refer instance variable from static method...
+                System.out.println(Test.this.name); // cant refer instance variable from static method...
+            }
+        }
+    }
+}
+
+7- Things u cant declare in anonymous class:
+   1- Constructors.
+   2- static fields.
+   3- static initializers.
+   4- static method.
+   5- member interfaces and enum.
+
+8- any enum cant extend another enum or class.
+
+9- u cant also explicitly extend java.lang.Enum.
+
+10- enum can only have private or package-private constructors.
+
+11-
+/*****
+ * Notes:
+ *
+ * 1- if u have abstract method in enmum, then all enum constants need to override abstract method.
+ * 2- after enum constants we must add ;
+ * 3- eventho u add method as public in constant (printSomeAdditionalInfo() ), but that does not mean it can be accessed
+ *    from outside, only from within the constant itself
+ * *****/
+
+12- local variable used in local class should be final or efficiently final,
+      and once u set u cant change its value...
+
+    // Simple class demonstrating a local class in a method
+    public class Test {
+
+        public static void main(String[] args) {
+
+            // Create a local variable and assign it a value
+            int efinal = 1; // cant change its value once u set... bcoz its effectively final..
+            // efinal = 2; // compiler error, even thos u assign value AFTER LocalClass declartion it will still shows a compiler error...
+
+
+            // Local Class created with a single method that
+            // uses the efinal local variable just created
+            class LocalClass {
+                public void printValue() {
+                    System.out.println("efinal = " + efinal);
+                    //efinal++; // compiler error
+                }
+            }
+
+            // efinal = 3; // compiler error
+
+            // Execute method on the local class
+            new LocalClass().printValue();
+        }
+    }
+
+13- initialization in enum, notice the sequence:
+
+enum PrimaryColor {
+    RED(1) {
+        {
+            // initializer for the individual class constants
+            System.out.println(this + " initialized");
+        }
+    },
+    BLUE(2) {
+
+        {
+            // initializer for the individual class constants
+            System.out.println(this + " initialized");
+        }
+    },
+    YELLOW(3) {
+        {
+            // initializer for the individual class constants
+            System.out.println(this + " initialized");
+        }
+    };
+
+    int rating = 0;
+
+    // static initializer for the PrimaryColor class (enum)
+    static {
+        System.out.println("Enum Class Initialization");
+    }
+
+    // initializer for all of the anonymous class constants
+    {
+        System.out.println("Enum Body Initialization for " + this);
+    }
+
+    // Constructor
+    PrimaryColor(int rating) {
+        System.out.println("Primary Color constructor for " + this);
+        this.rating = rating;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        /********
+         * Notes:
+         * 1- static initializer called once only for all...(Enum Class Initialization).
+         * 2- just run this class and notice the order of the initializations.
+         * ******/
+        System.out.println(PrimaryColor.RED);
+        System.out.println(PrimaryColor.BLUE);
+        System.out.println(PrimaryColor.YELLOW);
+    }
+}
+
+14- implementing interface in enum.....
+
+/**********
+ * Notes:
+ * 1- the below code we have enum that implemenets interface...
+ *    - we can make SecondaryColors implement the method doIt() OR
+ *    - we can make each constant to implement the method. but they MUST ALL IMPLEMENT THIS METHOD.....               /******** TRICKY ************
+ *
+ *
+ * ***********/
+
+//  create an interface with a single method
+interface DoItInterface {
+    public void doIt();
+}
+
+// Declare an enum that implements an interface
+enum SecondaryColors implements DoItInterface {
+    ORANGE {
+        // If doIt is abstract or NOT declared at all in the enum body
+        // each constant must implement the method
+        public void doIt() {
+            System.out.println(this + " is implementing an interface's method ");
+        }
+    },
+    PURPLE {
+        // You can implement interface method in the enum constant body
+        public void doIt() {
+            System.out.println(this + " wants to be different");
+        }
+    },
+    GREEN {
+        // If doIt is abstract or NOT declared at all in the enum body
+        // each constant must implement the method
+        public void doIt() {
+            System.out.println(this + " is implementing an interface's method ");
+        }
+    };
+
+
+}
+
+public class Test {
+
+    // This method accepts an interface typed parameter
+    public void printData(DoItInterface o) {
+        o.doIt();
+    }
+
+    public static void main(String[] args) {
+        Test e = new Test();
+
+        // You can pass enum constants to a method that takes the
+        // interface typed parameter
+        e.printData(SecondaryColors.ORANGE);
+        e.printData(SecondaryColors.PURPLE);
+    }
+}
+

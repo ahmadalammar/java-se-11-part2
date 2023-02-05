@@ -1,0 +1,1320 @@
+############################# Lambda operation and stream #########################
+                                       /************************ memorize ***********************/
+
+Functional interface -    Stream method    -       Method     -   example
+BinaryOperator            reduce               T apply(T, T)      (a,b)-> a+b
+Comparator                max, min, sorted     compare(T,U)       (a,b)-> a-b
+Consumer                  peek                 accept(T)          (a) -> System.out.print("hello")
+BiConsumer                collect, forEach     accept(T,U)
+Function                  flatMap, map         R apply(T)         (s) -> s.replace('a','b');
+UnaryOperator             iterate              T apply(T)         (s) -> s+1
+Predicate                 allMatch,anyMatch
+                          dropWhile,Filter,    boolean test(T)    (t) -> t>0
+                          iterate,noneMatch,
+                          takeWhile
+Supplier                  collect,generate     T get()            () -> String::new
+
+##################### peek and map, flatMap
+
+1- peek:
+usually used for debug and does not change the data, unless u r change the object fields value itself in the peek
+Stream<T> peek(Consumer<? super T> action)
+Any lambda expression or method reference passed to this operation
+must meet the requirements of the functional interface consumer method:
+              void accept(T t)
+
+
+2- map:
+map usually used to transform the data and it will change the from T to R
+<R> Stream<R> map (Function<? super T, ? extends R> mapper)
+Any lambda expression or method reference passed to this operation
+must meet the requirements of the functional interface consumer method:
+              R apply(T)
+
+peek example:
+
+import section9.Student;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+
+    public static void main(String[] args) {
+        Test p = new Test();
+
+        // Create a studentList of 5 students
+        List<Student> firstList = Stream.generate(Student::new)
+                .limit(5).collect(Collectors.toList());
+
+        System.out.println("--------- Before Peek ---------");
+        firstList.forEach(System.out::println);
+        System.out.println("---- Peeking during stream operations ----");
+        // Create a second studentList using first and looking
+        // at elements on the Stream using peek
+        List<Student> secondList = firstList.stream()
+                .peek(System.out::print)
+                .collect(Collectors.toList());
+
+        System.out.println("\n--------- After Peek ---------");
+        firstList.forEach(System.out::println);
+
+        System.out.println("Lists contain same elements? " +
+                firstList.equals(secondList));
+
+        List<Student> thirdList =
+                firstList.stream()
+                        // What happens if we call a method with side-effect?
+                        .peek(Test::changeStudent)
+                        // Terminal operation returns a List
+                        .collect(Collectors.toList());
+
+        System.out.println("firstList = " + firstList);
+        System.out.println("thirdList = " + thirdList);
+
+    }
+
+    // A method that has side-effects, name of student changes
+    private static void changeStudent(Student p) {
+        p.setName(p.getName() + " Doe"); // notice here we are appending the name..but usually its not a good practice to map the data in peek method.
+    }
+}
+
+
+map example:
+
+import section9.Student;
+
+import java.util.AbstractMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+
+    public static void main(String[] args) {
+        Test p = new Test();
+
+        // Create a studentList of 5 students
+        List<Student> firstList = Stream.generate(Student::new)
+                .limit(5).collect(Collectors.toList());
+
+        List<Student> secondList =
+                firstList.stream()
+                        // Using map to call changeStudent() method
+                        .map(Test::changeStudent)
+                        // Terminal operation returns List
+                        .collect(Collectors.toList());
+
+        System.out.println("firstList = " + firstList);
+        System.out.println("secondList = " + secondList);
+
+        System.out.println("Both Lists have the same elements: " +
+                firstList.containsAll(secondList));
+
+        Set firstset =
+                firstList.stream()
+                        // Map a student to an Map.Entry (key,value)
+                        .map(Test::mapStudent)
+                        // Terminal operations returns a Set
+                        .collect(Collectors.toSet());
+
+        System.out.println("firstset = " + firstset);
+
+    }
+
+    // This method has side-effects, name of student changes
+    private static Student changeStudent(Student p) {
+        p.setName(p.getName() + " Doe");
+        return p;
+    }
+
+    // A method that transforms a student to a mapped entry
+    private static Map.Entry<Integer, Student> mapStudent(Student p) {
+        return new AbstractMap.SimpleEntry<Integer, Student>(p.getStudentId(), p);
+    }
+
+}
+
+mapToInt,mapToDouble....
+Note:                      /************** TRICKY **************/
+mapToInt exists in Stream
+while map exists in IntStream.
+
+
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+public class Test {
+
+    public static void main(String[] args) {
+        // Using an IntStream
+        System.out.println("Output from an IntStream using map");
+        IntStream.iterate(5, (t) -> t + 5)
+                .limit(5)
+                .map((s) -> s * 1000)
+                .forEach((s) -> System.out.print(s + " "));
+
+        // Using a Stream<Integer>
+        System.out.println("\nOutput from an Stream using mapToInt");
+        Stream.<Integer>iterate(5, (t) -> t + 5)
+                .limit(5)
+                .mapToInt((s) -> s * 1000) // here the result is IntStream, hence u can use map...
+                .map((s) -> s / 1000)
+                .mapToInt((s) -> s * 1000) // mapToInt not exists in IntSteam, hence its compiler error
+                .forEach((s) -> System.out.print(s + " "));
+
+    }
+}
+
+
+2- flatMap:
+<R> Stream<R> flatMap (Function<? super T, ? extends Stream<? extends R> mapper)
+it perform one-to-many mapping using function lambda expression that operate on the stream
+and it returns a stream of the same of some other element.
+
+Note:
+both map and flat map accept lambda expression or method reference R apply(T t).
+
+example:
+
+import section9.Course;
+import section9.Student;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Local Variable studentList will contain results
+        List<Student> studentList = Stream.of(
+                        // Stream of courses created
+                        new Course("Geometry 101", 3),
+                        new Course("Java 101", 5),
+                        new Course("History 101", 4))
+                .peek(System.out::println)
+                // Map from course object to a stream of student objects
+                .flatMap(course ->
+                        course.getStudentList().stream()
+                )
+                // Terminal operation returns list of student
+                .collect(Collectors.toList());
+
+        // Print the entire student list for all courses
+        System.out.println("Complete Student Population: ");
+        studentList.forEach(System.out::println);
+    }
+}
+
+
+##################### Optional class methods
+has the following static methods:
+
+1- empty():
+   returns an empty optional instance.
+2- of(T value):
+   returns an optional describing the given non-null value.
+   it will throw NPE if value T is null
+3- ofNullable(T value):
+   returns an optional describing the given value, if non-null
+   otherwise returns an empty Optional.
+   it wont throw NPE if value T is null
+
+
+example:
+
+import java.util.Optional;
+
+public class Test {
+    static Float gpa ;
+
+    public static void main(String[] args) {
+
+        //Optional.of(gpa).orElse(null); // it will throw NPE of gpa is null
+        Float f = Optional.ofNullable(gpa).orElse(Float.valueOf(12)); // it wont throw npe
+        System.out.println(f); // 12.0
+
+    }
+}
+
+more of Optional.of vs Optional.ofNullable:
+https://stackoverflow.com/questions/31696485/why-use-optional-of-over-optional-ofnullable
+
+example about Optional.of and Optional.empty:
+key take note from below example is that u cant get value from empty optional,
+it will show u runtime exception 'no value present'
+
+import java.util.List;
+import java.util.Optional;
+
+// Create a CollegeStudent with a name & gpa
+class CollegeStudent {
+    private Optional<Float> gpa = Optional.empty();
+    private String name;
+
+    // Constructor
+    CollegeStudent(String name) {
+        this.name = name;
+    }
+
+    CollegeStudent(String name, float gpa) {
+        this.name = name;
+        this.gpa = Optional.of(gpa);
+    }
+
+    public Optional<Float> getGpa() {
+        return gpa;
+    }
+
+    public void setGpa(Float gpa) {
+        this.gpa = Optional.ofNullable(gpa);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+}
+
+// Class to Test retrieving Gpa
+public class Test {
+    public static void main(String[] args) {
+        CollegeStudent joe = new CollegeStudent("Joe", 3.2f);
+        CollegeStudent jane = new CollegeStudent("Jane");
+
+//        List.of(joe, jane)
+//                .stream()
+//                .forEach(OptionalTests::printStatus);
+
+        List.of(joe, jane)
+                .stream()
+                //.filter(s -> s.getGpa().isPresent()) // if we comment out isPresent() then foreach may also include those with empty gpa,
+                // and when we try to s.getGpa().get() it will show runtime exception 'no value present'
+                .forEach(s -> System.out.println(s.getName() +
+                        (s.getGpa().get() >= 2.0f
+                                ? " in good standing" :
+                                " on academic probation")));
+    }
+
+    // Print's student's academic status
+    private static void printStatus(CollegeStudent student) {
+        System.out.print(student.getName());
+        Optional<Float> gpa;
+        if ((gpa = student.getGpa()).isPresent()) {
+            if (gpa.get() < 2.0) {
+                System.out.println(" is on academic probation");
+            } else {
+                System.out.println(" is in good standing");
+            }
+        } else System.out.println(" has an unknown gpa");
+    }
+}
+
+Other Optional methods:               /***************** memorize ****************/
+1- isPresent:
+   boolean isPresent()
+   public void ifPresent(Consumer<? super T> action) {
+           if (value != null) {
+               action.accept(value);
+           }
+    }
+    if value is present, perform the given action with the value, otherwise does nothing.
+
+2- ifPresentOrElse:
+   void ifPresentOrElse(Consumer action, Runnable emptyAction);
+   if value present perform the given action with the value,
+   otherwise perform empty-based action
+
+3- Or:
+   Optional<T> or(Supplier supplier)
+   if value is present returns an optional describing the value,
+   otherwise returns an Optional produced by the supplying function.
+   'Or' method will only be executed if value is empty...
+
+4- orElse:
+   T orElse(T other)
+   if value is present return the value, otherwise return other value.
+   it will be executed in both cases, whether T has a value or not...
+
+5- orElseGet:
+   T orElseGet(Supplier supplier)
+   if value is present then return the value
+   otherwise returns the result produced by te supplying function.
+   it will be executed only if T is empty...
+
+6- orElseThrow:
+   T orElseThrow()
+   if value present return the value, otherwise throw NoSuchElementException
+   T orElseThrow(Supplier exceptionSupplier)
+    if value present return the value, otherwise throw an exception produced by the exception
+    supplying function.
+
+examples:
+
+1- example about 'or' method:
+
+import java.util.List;
+import java.util.Optional;
+
+// Create a CollegeStudent with a name & gpa
+class CollegeStudent {
+    private Optional<Float> gpa = Optional.empty();
+    private String name;
+
+    // Constructor
+    CollegeStudent(String name) {
+        this.name = name;
+    }
+
+    CollegeStudent(String name, float gpa) {
+        this.name = name;
+        this.gpa = Optional.of(gpa);
+    }
+
+    public Optional<Float> getGpa() {
+        return gpa;
+    }
+
+    public void setGpa(Float gpa) {
+        this.gpa = Optional.ofNullable(gpa);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+}
+
+// Class to Test retrieving Gpa
+public class Test {
+    public static void main(String[] args) {
+        CollegeStudent joe = new CollegeStudent("Joe", 3.2f);
+        CollegeStudent jane = new CollegeStudent("Jane");
+        List.of(joe, jane)
+                .stream()
+                .forEach(s -> System.out.println(s.getName() +
+                        (s.getGpa()
+                                .or(() -> { // or method will only be executed if gpa is empty...
+                                    System.out.println(
+                                            "In Supplier Code for "+ s.getName());
+                                    return Optional.of(2.0f);
+                                })
+                                .get() >= 2.0f
+                                ? " in good standing" :
+                                " on academic probation")));
+    }
+}
+
+
+2- example about orElse and orElseGet:
+
+import java.util.List;
+import java.util.Optional;
+
+// Create a CollegeStudent with a name & gpa
+class CollegeStudent {
+    private Optional<Float> gpa = Optional.empty();
+    private String name;
+
+    // Constructor
+    CollegeStudent(String name) {
+        this.name = name;
+    }
+
+    CollegeStudent(String name, float gpa) {
+        this.name = name;
+        this.gpa = Optional.of(gpa);
+    }
+
+    public Optional<Float> getGpa() {
+        return gpa;
+    }
+
+    public void setGpa(Float gpa) {
+        this.gpa = Optional.ofNullable(gpa);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+}
+
+// Class to Test retrieving Gpa
+public class Test {
+    public static void main(String[] args) {
+        CollegeStudent joe = new CollegeStudent("Joe", 3.2f);
+        CollegeStudent jane = new CollegeStudent("Jane");
+
+        List.of(joe, jane)
+                .stream()
+                .forEach(s -> System.out.println(s.getName() +
+                        (s.getGpa()
+                              //  .orElse(Test.getGpaEstimate()) // orElse not a lambda expression so id does not accpet method referene...
+//                                .orElseThrow()
+                                .orElseGet(Test::getGpaEstimate) // orElseGet accept method reference...
+                                >= 2.0f
+                                ? " in good standing" :
+                                " on academic probation")));
+    }
+
+
+    private static float getGpaEstimate() {
+        System.out.println("--- in getGpaEstimate method");
+        return 2.0f;
+    }
+}
+
+
+
+##################### allMatch , findAny, findFirst
+its terminal operation
+
+boolean allMatch(Predicate<? super T> predicate>)
+boolean anyMatch(Predicate<? super T> predicate>)
+boolean noneMatch(Predicate<? super T> predicate>)
+Optional<T> findAny()
+Optional<T> findFirst()
+
+filter is not a terminal operation
+
+example about allMatch,findAny,findFirst...etc
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 8: Lambda Operations on Stream
+Topic: Searching Streams
+*/
+
+import java.util.*;
+import java.util.stream.Stream;
+
+// Test search methods on a Stream
+public class Test {
+    public static void main(String[] args) {
+
+        Random r = new Random();
+        Optional<Integer> anyItem =
+                // Infinite Stream
+                Stream.generate(() -> r.nextInt(20))
+                        // limit
+                        .limit(5)
+                        // Print elements on stream at this point
+                        .peek(System.out::println)
+                        // sort
+                        .sorted()
+                        // Check if any elements generated by Stream.generate()
+                        .findAny();
+
+        System.out.print("What is an element found on stream? ");
+        anyItem.ifPresent(System.out::print);
+
+        System.out.println("\n----------------");
+        Optional<Integer> firstItem =
+                // Infinite Stream
+                Stream.generate(() -> r.nextInt(20))
+                        // limit
+                        .limit(5)
+                        // Print elements on stream at this point
+                        .peek(System.out::println)
+                        // sort
+                        .sorted()
+                        // Check first element generated by Stream.generate()
+                        .findFirst();
+
+        System.out.print("What is first element found on stream? ");
+        firstItem.ifPresent(System.out::print);
+
+        System.out.println("\n----------------");
+        List<String> aList = List.of();
+        Optional<String> anyString = aList.stream().findAny();
+
+        System.out.print("Was any element found on stream? ");
+        anyString.ifPresentOrElse(
+                System.out::print, () -> System.out.println("Nope"));
+
+        Optional<String> firstString = aList.stream().findFirst();
+        System.out.print("Was a first element found on stream? ");
+        firstString.ifPresentOrElse(
+                System.out::print, () -> System.out.println("Nope"));
+
+        System.out.println("\n------ Test Match Methods ----------");
+        // Create some test data
+        List<String> initialData = List.<String>of("One", "Two", "Three",
+                "Four", "Five", "Six");
+        Set<String> unOrderedSet = new HashSet<String>(initialData);
+        // Test if any elements have a length of 6 using anyMatch
+        boolean anyMatch = unOrderedSet.stream()
+                .anyMatch((s) -> s.length() == 6);
+
+        System.out.println("This list " +
+                (anyMatch ? "does contain" : "does NOT contain") +
+                " elements whose length == 6");
+
+        // Test if all elements have a length of 5 ore less
+        boolean allMatch = unOrderedSet.stream()
+                .allMatch((s) -> s.length() < 6);
+
+        System.out.println("All elements in this list " +
+                (allMatch ? "are" : "are NOT") +
+                " of a length < 6 ");
+
+        // Test if no elements have a length of 6.
+        boolean noneMatch = unOrderedSet.stream()
+                .noneMatch((s) -> s.length() == 6);
+
+        System.out.println("This list " +
+                (noneMatch ? "does NOT contain" : "does contain") +
+                " elements whose length == 6");
+
+        List<String> noData = List.of();
+        anyMatch = noData.stream()
+                .anyMatch((s) -> s.length() == 6);
+        allMatch = noData.stream()
+                .allMatch((s) -> s.length() < 6);
+        noneMatch = noData.stream()
+                .noneMatch((s) -> s.length() == 6);
+
+        System.out.println("anyMatch = " + anyMatch + " : allMatch = " +
+                allMatch + " : noneMatch = " + noneMatch);
+
+        System.out.println("----- Filter : Predicate [ (s) -> s > 10] -----");
+        Stream.generate(() -> r.nextInt(20))
+                // limit
+                .limit(10)
+                .filter((s) -> s > 10)
+                .forEach(System.out::println);
+
+    }
+}
+
+
+##################### max, min, sum, average (reduction operation)
+
+long count()
+Optional<T> max(Comparator<? super T> comparator)   // return Optional, cant be assigned directly to primitive      /*********** TRICKY **********/
+Optional<T> min(Comparator<? super T> comparator)    // return Optional, cant be assigned directly to primitive     /*********** TRICKY **********/
+Optional<T> reduce(BinaryOperator<T> accumulator)   // perform reduction and return Optional value if any..             /**************** MEMORIZE *****************/
+T reduce(T identity, BinaryOperator<T> accumulator)  // perform reduction on the element using provided identity          /**************** MEMORIZE *****************/
+                                                     // value and associative accumulation function and returns reduced value
+
+example below:
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Local variable to house random list of Integer
+        List<Integer> randomIntegerList;
+
+        // Test count, min, max, 5x (change limit each iteration)
+        for (int i = 0, limit = 0; i < 5; i++) {
+            randomIntegerList =
+                    //  returns an IntStream of random integers, here bound
+                    // between 1 and 100,000 - introduced in Java 8
+                    new Random().ints(1, 100_000)
+                            // Transform from an IntStream to Stream<Integer>
+                            .boxed()
+                            // Limit by the limit variable which changes
+                            .limit(limit).collect(Collectors.toList());
+
+            // count method returns a long, not an Optional - result
+            // equals limit value
+            long count = randomIntegerList.stream().count();
+
+            // max method returns an Optional, so use .get() to get value
+            long max = randomIntegerList.stream()
+                    // Max method requires Comparator, use static method
+                    // on Comparator to use natural order for int
+                    .max(Comparator.<Integer>naturalOrder())
+                    .orElse(-1);
+
+            // min method returns an Optional, so use .get() to get value
+            long min = randomIntegerList.stream()
+                    .min(Comparator.<Integer>naturalOrder())
+                    .orElse(-1);
+
+            // Alter limit, higher limit- range gets closer to 1 & max
+            limit = (limit == 0) ? 1 : limit * 10;
+
+            // Print data from stream terminal operations count, max, min
+            System.out.println("Limit = " + count + ", min  = " + min
+                    + ", " + "max = " + max);
+
+            /*****************
+             * Note:
+             * 1- sum, average are not in Stream, they are method in IntStream, LongStream... etc        /************ TRICKY ************
+             * 2- if u want to get sum in stream, then u should use reduce method
+             * 3- sum method return int, while average() and max, min return OptionalInt, OptionalLong,        /************ TRICKY ***********/
+             * ***********************/
+            double average = randomIntegerList.stream()
+                    // mapToInt transforms to IntStream, one to one mapping
+                    .mapToInt((s) -> s)
+                    // Use average method, returns OptionalInt
+                    .average()
+                    // If OptionalInt is empty, set it to -1
+                    .orElse(-1);
+
+            double sum = randomIntegerList.stream()
+                    // mapToInt transforms to IntStream, one to one mapping
+                    .mapToInt((s) -> s) // if u comment out this line then sum method will show error (not found method)
+                    // Use sum method
+                    .sum();
+
+            System.out.println("Limit = " + count + ", average  = " +
+                    average + ", " + "sum = " + sum);
+        }
+    }
+}
+
+##################### IntStream, LongStream, DoubleStream
+
+all the Intstream, doubleStream, LongStream are terminal operation except rang, rangeClose...
+
+example below:
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 8: Lambda Operations on Stream
+Topic:  Using IntStream, LongStream, DoubleStream;
+*/
+
+import java.util.DoubleSummaryStatistics;
+import java.util.IntSummaryStatistics;
+import java.util.LongSummaryStatistics;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create a IntStream, using static method range
+        // Second argument is exclusive
+        IntSummaryStatistics intStats = IntStream.range(1, 10)
+                .summaryStatistics();
+        System.out.println(intStats);
+
+        // Create LongStream, using static method rangeClosed
+        // Second argument is inclusive
+        LongSummaryStatistics longStats = LongStream.rangeClosed(1, 10)
+                .summaryStatistics();
+        System.out.println(longStats);
+
+        // Create DoubleStream, using using iterate
+        DoubleSummaryStatistics doubleStats =
+                DoubleStream.iterate(1.0, s -> s < 10.0, s -> s + 1)
+                        .summaryStatistics();
+        System.out.println(doubleStats);
+
+        System.out.println("--- Reduction operations ----");
+        System.out.println("Max = " + IntStream.range(1, 10).max());
+        System.out.println("Min = " + LongStream.range(100, 1000).min());
+        System.out.println("Average = " + DoubleStream.iterate(
+                1.0, s -> s < 10.0, s -> s + 1).average());
+
+        System.out.println("Sum = " + IntStream.iterate(
+                5, s -> s < 100, s -> s + 5).sum());
+
+        System.out.println(
+                // Start with a Stream<Integer>
+                Stream.iterate(1, s -> s <= 100, s -> s + 5)
+                        // transform to IntStream
+                        .mapToInt(s -> s)
+                        // transform to Stream<Integer>
+                        .boxed()
+                        // transform to DoubleStream
+                        .mapToDouble(s -> s)
+                        .summaryStatistics()
+        );
+    }
+}
+
+##################### Sort collection
+
+Stream<T> sorted(): return stream sorted in natural order
+Stream<T> sorted(Comparator<? super T> comparator) : return stream sorted according to provided comparator
+
+example below:
+
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
+
+class Guest implements Comparable<Guest> {
+    protected String first;
+    protected String last;
+
+    // Constructor
+    Guest(String first, String last) {
+        this.first = first;
+        this.last = last;
+    }
+
+    public String toString() {
+        return this.last + ", " + this.first;
+    }
+
+    public int compareTo(Guest o) {
+        return last.compareToIgnoreCase(o.last);
+    }
+
+    public static int sortByFirst(Guest g1, Guest g2) {
+        return g1.first.compareToIgnoreCase(g2.first);
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        // Test data
+        List<String> initialData = List.<String>of("One", "Two", "Three",
+                "Four", "Five", "Six", "Abc");
+
+        // HashSet is unordered
+        Set<String> unOrderedSet = new HashSet<String>(initialData);
+
+        System.out.println("---- UnOrdered Stream ");
+        // Stream<Stream> created, Print each element
+        initialData.stream()
+                // print each element
+                .forEach((s) -> System.out.print(s + " "));
+
+        System.out.println("\n---- Using sorted operation on Stream");
+        initialData.stream()
+                // Uses Natural Order, alphabetical
+                .sorted()
+                // print each element
+                .forEach((s) -> System.out.print(s + " "));
+
+        System.out.println("\n---- Using sorted with Stream of Guest");
+
+        Stream.of(new Guest("Ann", "Jones"),
+                        new Guest("Bob", "Smith"),
+                        new Guest("Carol", "Green"))
+                .sorted() // Guest must implement Comparable in order to sort the collection, otherwise will show ClassCastException.....        /********* TRICKY **************/
+                .sorted(Comparator.naturalOrder()) // Guest MUST implement Comparable in order to use naturalOrder() method, otherwise it will show compiler error,
+                                                   // the difference with above example in sorted() -> it show runtime error class cast exception, but here we getting compiler error.
+                .sorted((s, t)->s.last.compareToIgnoreCase(t.last)) // or we can use lambda expression
+                .sorted(Guest::sortByFirst) // here u can use your own custom method reference , so Guest does not have to implement Comparable
+                .forEach((s) -> System.out.println(s.first + " " + s.last));
+
+        System.out.println("\n---- Stream with multiple sorts/peeks");
+        initialData.stream()
+                // Pass a Comparator that sorts by length of String value
+                .sorted((s, t) -> s.length() - t.length())
+                .peek((s) -> System.out.println(s + " "))
+                // Uses Natural Order, alphabetical, same as sorted() with
+                // no argument
+                .sorted(Comparator.naturalOrder()) // note Comparator::reverseOrder , Comparator::naturalOrder an not valid method reference for sorted method,
+                                                   // bcoz they not match the method signature of Comparator...
+                .forEach((s) -> System.out.print(s + " "));
+
+    }
+}
+
+##################### Collectors
+- Mutable collections:
+toCollection(), toConcurrentMap(), toList(), toMap(), toSet.
+- Immutable collections:
+toUnmodifiableList(), toUnmodifiableMap(), toUnmodifiableSet(),
+
+- Reduction operators provided by the collectors class:
+1- averagingDouble, averagingInt, averagingInt, averagingLong:
+   provide average fpr elements passed to it.
+2- counting:
+   count elements
+3- joining:
+   join String or CharSequence into one
+4- maxBy, minBy
+5- summingDouble, summingInt, summingLong.
+
+example below:
+
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create a List which will be used as source of stream pipelines
+        List<String> originalList =
+                new ArrayList<>(List.of("First", "Second", "Third"));
+
+        // Using stream to add 'ish' to all elements,creating another list
+        List<String> firstList = originalList.stream().map((s) -> s + "ish")
+                .collect(Collectors.toList());
+
+        // Add another element to list returned from collect
+        firstList.add("Fourthish");
+
+        // Print both lists
+        System.out.println("originalList = " + originalList);
+        System.out.println("firstList = " + firstList);
+
+        System.out.println("---- .collect(Collectors.joining) examples ----");
+        // Joins with no delimiters
+        String joinedExample1 = originalList.stream()
+                .collect(Collectors.joining());
+
+        // Joins Strings delimited by a comma
+        String joinedExample2 = originalList.stream()
+                .collect(Collectors.joining(", "));
+
+        // Joins Strings delimited by a comma, prefixed/suffixed with
+        // beginning/ending bracket
+        String joinedExample3 = originalList.stream()
+                .collect(Collectors.joining(", ", "List [", "]"));
+
+        System.out.println("Collectors.joining - with no parameters: " +
+                joinedExample1);
+        System.out.println("Collectors.joining - with delimiter : " +
+                joinedExample2);
+        System.out.println("Collectors.joining - with delimiter," +
+                " prefix and suffix : " + joinedExample3);
+
+        System.out.println("---- .collect(Collectors.averaging) examples ----");
+        // Create random list of numbers
+
+        double average = new Random().ints(1, 100_000)
+                // Limit to 1000 random numbers
+                .limit(1000)
+                .boxed() // transform to an Integer stream
+                .collect(Collectors.averagingInt((s) -> s));
+
+        System.out.println("average of random integers = " + average);
+
+        double AverageGPA = Stream.of(new Student("Jeff", 2.7f),
+                        new Student("Carol", 3.5f),
+                        new Student("Andy", 1.7f))
+                .collect(Collectors.averagingDouble(Student::getGpa));
+
+        System.out.println(String.format("Average GPA = %.2f",
+                AverageGPA));
+
+        System.out.println("---- .collect(" +
+                "Collectors.summarizing examples ----");
+        // Get Summary Statistics from an IntStream
+        IntSummaryStatistics firstStats = new Random().ints(1, 100_000)
+                .limit(1000)
+                .summaryStatistics();
+
+        System.out.println(firstStats);
+
+        // Get Summary Statistics from a Stream<Integer>
+        IntSummaryStatistics secondStats = new Random().ints(1, 100_000)
+                .limit(1000)
+                .boxed()
+                .collect(Collectors.summarizingInt((s) -> s));
+
+        System.out.println(secondStats);
+
+        // Get Summary Statistics (about the gpa) from a Stream<Student>
+        DoubleSummaryStatistics gpaStats = Stream.of(new Student("Jeff", 2.7f),
+                        new Student("Carol", 3.5f),
+                        new Student("Andy", 1.7f))
+                .collect(Collectors.summarizingDouble(Student::getGpa));
+
+        System.out.println(gpaStats);
+    }
+}
+
+// Student class
+class Student {
+    private float gpa;
+    protected String name;
+
+    // Constructor
+    Student(String name, float gpa) {
+        this.name = name;
+        this.gpa = gpa;
+    }
+
+    public String toString() {
+        return this.name + "[" + this.gpa + "]";
+    }
+
+    public float getGpa() {
+        return this.gpa;
+    }
+}
+
+##################### Collectors, grouping
+
+groupingBy(Function f)
+groupingBy(Function f, Collector c)
+groupingBy(Function f, Supplier s, Collector c)
+
+partitioningBy(Predicate p)
+partitioningBy(Predicate p, Collector c)
+
+example below:
+
+import section9.Pet;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Print one Pet object
+        System.out.println(new Pet());
+
+        // Create a randomly generated list of 5000 pets.
+        List<Pet> petPopulation = Stream.generate(Pet::new)
+                .limit(5000)
+                .collect(Collectors.toList());
+
+        // Count the number of Dogs
+        System.out.println("Number of Dogs = " +
+                petPopulation.stream()
+                        .filter((s) -> s.getType() == "Dog")
+                        .count());
+
+        System.out.println("--- Counts by Pet Type: ---");
+        petPopulation.stream()
+                // Collects to Map<String,Long> where key=pet type
+                .collect(Collectors.groupingBy(Pet::getType,
+                        Collectors.counting()))
+                // Create a stream from Map.entrySet()
+                .entrySet().stream()
+                // Sort stream by pet type (key for Map)
+                .sorted((s, t) -> s.getKey().compareTo(t.getKey()))
+                // Print element: a key/value pair
+                .forEach(System.out::println);
+
+        System.out.println("--- Average Age by State, PetType: ---");
+        Map<List, Double> petMaps = petPopulation.stream()
+                // Collect data into a Map<List,Double>
+                .collect(
+                        Collectors.groupingBy(
+                                // Grouping by list of attributes
+                                p -> Arrays.asList(
+                                        p.getState(), p.getType()),
+                                // Get average age of pet
+                                Collectors.averagingInt(Pet::getAge)));
+
+        // Can get very specific about requesting information from Map
+        System.out.println(String.format(
+                "Average age of a dog in CO = %.2f ",
+                petMaps.get(Arrays.asList("CO", "Dog"))));
+
+        System.out.println("--- Counts by State, PetType: ---");
+        petPopulation.stream()
+                // Collect data into a Map<List,Long>
+                .collect(
+                        Collectors.groupingBy(
+                                // Grouping by list of attributes
+                                p -> Arrays.asList(p.getState(), p.getType()),
+                                // Count pets by state, type
+                                Collectors.counting()))
+                // Create a stream from Map.entrySet()
+                .entrySet().stream()
+                // Sort first by state, then type, each part of key which is List
+                .sorted((s, t) -> (s.getKey().get(0) + s.getKey().get(1))
+                        .compareTo(t.getKey().get(0) + t.getKey().get(1)))
+                // Limit data to just Cat and Dog
+                .filter((s) -> (s.getKey().get(1).equals("Cat") ||
+                        s.getKey().get(1).equals("Dog")))
+                // Print each mapped entry
+                .forEach(System.out::println);
+
+        // Using .groupingBy with 3 arguments, second argument is Supplier
+        // Count Pet Population by each Pet Type
+        Map<String, Long> typeCounts = petPopulation.stream()
+                // Collects to Map<String,Long> where key=pet type
+                .collect(Collectors.groupingBy(Pet::getType,
+                        // Want a treeMap so map is ordered
+                        TreeMap::new,
+                        Collectors.counting()));
+        System.out.println("----- Ordered Mapping now ----- ");
+        System.out.println(typeCounts);
+
+        System.out.println("----- Creating Nested Collections ----- ");
+        Map<String, Map<String, Long>> TwoDMap = petPopulation.stream()
+                // Collect data into a Map<List,Double>
+                .collect(Collectors.groupingBy(
+                        // Grouping by State first
+                        Pet::getState,
+                        // Specify Sorted Map
+                        TreeMap::new,
+                        // Get average age of pet
+                        Collectors.groupingBy(
+                                // Grouping by Pet Type next
+                                Pet::getType,
+                                // Specify Sorted Map
+                                TreeMap::new,
+                                Collectors.counting()
+                        )));
+
+        TwoDMap.entrySet().forEach(System.out::println);
+
+        //Creates bifurcated population
+        Map<Boolean, List<Pet>> dogsAndNotDogs =
+                petPopulation.stream().collect(
+                        // Map<Boolean,List<Pet>
+                        Collectors.partitioningBy(s -> s.getType().equals("Dog"))
+                );
+
+        System.out.println("Print first five dogs");
+        dogsAndNotDogs.entrySet().stream()
+                // Only want Dogs, so key is true
+                .filter((s) -> s.getKey())
+                // Flatten list of Pets to a Stream
+                .flatMap(s -> s.getValue().stream())
+                .limit(5)
+                .forEach(System.out::println);
+
+        System.out.println("Just print dog population by veterinary type");
+        petPopulation.stream().collect(
+                        // Map<Boolean, Map<String,Long>
+                        Collectors.partitioningBy(s -> s.getType().equals("Dog"),
+                                Collectors.groupingBy(
+                                        // Grouping by Veterinary Practice
+                                        Pet::getVet,
+                                        // Specify Sorted Map
+                                        TreeMap::new,
+                                        Collectors.counting()))
+                )
+                .entrySet().stream()
+                .filter((s) -> s.getKey())
+                .forEach(System.out::println);
+    }
+}
+
+-----------------------------------------------
+
+########## out of ordinary examples:
+
+- Collectors.toMap:
+allows you to take a stream of elements and produce a map
+where entry and the element have 1 one-to-one relationship.
+key must be also unique or u will get an exception.
+
+- Collectors.groupingBy:
+allows u to take a stream of elements and produce a map where a mapped
+entry and the element have a one-to-many relationship.
+
+- distinct()
+returning a stream consisting of the distinct elements
+according to Object.equals(object)
+
+example about using distinct and toMap vs groupingBy:
+
+
+import section9.Pet;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+        List<Pet> petPopulation = Stream.generate(Pet::new)
+                //.distinct() // it will get distinct objects by this using equals(Object o)
+                .limit(5)
+                .collect(Collectors.toList());
+
+        petPopulation.forEach(System.out::println);
+
+        System.out.println("--- Group by Pet using groupingBy ---");
+        // Take list of Pet, collect into a Map using groupingBy
+        // chain to stream of Entry and print key,values.
+        petPopulation.stream()
+                .collect(
+                        // groupingBy with a single argument
+                        Collectors.groupingBy(Pet::getType))
+                .entrySet()
+                .stream()
+                .forEach(System.out::println); // notice the output here is one-to-many,Pig=[Pet{type='Pig', name='Barkley', owner='Don', age=6}] (we have list of pets)....
+
+        System.out.println("--- Group by Pet using toMap ---");
+        // Take list of Pet, collect into a Map using toMap
+        // chain to stream of Entry and print key,values.
+        petPopulation.stream()
+                //.distinct() // toMap must not contain duplicate keys, thats why we use distinct here, if there is a duplicate keys then it will show runtime error
+                .collect(
+                        // toMap requires at least 2 arguments
+                        Collectors.toMap(p -> p.getType() + "_" + p.getName(),
+                                p -> p))
+                .entrySet()
+                .stream()
+                .forEach(System.out::println); // notice the output here is one-to-one, Pig_Barkley=Pet{type='Pig', name='Barkley', owner='Don', age=6} (we have one Pet object only...)
+
+
+    }
+}
+
+-----------------------------------------------
+
+########## out of ordinary examples 2:
+
+about flatMap:
+
+
+
+import section9.Pet;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create three different Lists of Pet objects
+        List<Pet> petList1 = List.of(new Pet(), new Pet(), new Pet());
+        List<Pet> petList2 = List.of(new Pet(), new Pet(), new Pet());
+        List<Pet> petList3 = List.of(new Pet(), new Pet(), new Pet());
+
+        // Create List of List of Pets
+        List<List<Pet>> listOfPets
+                = List.of(petList1, petList2, petList3);
+
+        System.out.println("--- List of lists ---");
+        listOfPets.forEach(System.out::println);
+
+        // Create a list (outside of the stream)
+        List<Pet> fullList = new ArrayList<Pet>();
+        listOfPets.stream()
+                // Collect all elements into fullList
+                .map(s -> fullList.addAll(s))
+                // Non-short-circuiting terminal operation
+                .allMatch(p -> p != null);
+        System.out.println("--- Full list ---");
+        fullList.forEach(System.out::println);
+
+        System.out.println("--- Create Full list with flatMap---");
+        listOfPets.stream()
+                // Turns a List<Pet> to Stream<Pet>
+                //.flatMap(Collection::stream) // this will flat the list
+                //.flatMap(Stream::of) //this will not flat the list ...               /******* TRICKY ************/
+                .flatMap(s -> s.stream())// this will flat the list
+                //.collect(Collectors.toList())
+                .forEach(System.out::println);
+
+        System.out.println("--- Putting it all together---");
+        listOfPets.stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.groupingBy(Pet::getType))
+                .entrySet()
+                .stream()
+                .forEach(System.out::println);
+
+    }
+}
+
+--------------------------------------
+
+Tricky question #1
+
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        List aList = List.of("January", "February");
+        List bList = List.of("January", "September");
+        List cList = List.of("February", "April");
+
+        Stream.of(aList, bList, cList)
+                .distinct()     // Line 1
+                .flatMap(Collection<String>::stream)  // Line 2
+                // .distinct() // if u added here then it will print unique resutls.
+                .peek(s -> System.out.print(s + ","))
+                .allMatch(s -> s.length() >= 5);  // Line 3
+
+    }
+}
+whats the output?
+January,February,January,September,February,April,
+This answer is correct. The distinct() operator is applied to the three Lists, and not the members
+of the list so it has no effect, and the allMatch becomes false after the peek operation prints April.
+
+---------------------------------------------------
+
+Tricky question #2:
+
+public class Test {
+    public static void main(String[] args) {
+
+        System.out.println(
+                Stream.iterate(10, t -> t <= 30, (t) -> t + 10)
+                        .mapToInt((s) -> s * 1000) // Line 1
+                        .map((s) -> s / 1000) // Line 2
+                        //.boxed() // this will convert it to Stream, and Stream does not have average, hence it will show compiler error at line 3
+                        .average()); // Line 3
+
+    }
+}
+output is:
+OptionalDouble[20.0]
+
+------------------------------------------------------
+
+Tricky question #3:
+
+enum Category {
+    FRUIT, VEGETABLE;
+}
+
+class ProduceItem {
+    private Category category;
+    private String value;
+
+    ProduceItem(Category category, String value) {
+        this.category = category;
+        this.value = value;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public String toString() {
+        return value;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        Stream.of(
+                new ProduceItem(Category.FRUIT, "Apple"),
+                new ProduceItem(Category.VEGETABLE, "Broccoli"),
+                new ProduceItem(Category.FRUIT, "Pear")
+        ).collect(Collectors.partitioningBy(
+                c -> c.getCategory() == Category.VEGETABLE)) // Line 1
+                .values().stream()  // Line 2
+                .forEach(System.out::print);
+
+    }
+}
+[Apple, Pear][Broccoli] // notice it started with [Apple, Pear] not with [Broccoli], explanation below:
+The collect terminal operation creates a Map<Boolean><List<ProduceItem>>, keyed by false and true values. The false key is first and contains the Fruit ProduceItems.

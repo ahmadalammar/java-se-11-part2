@@ -1,0 +1,530 @@
+1-
+                                       /************************ memorize ***********************/
+
+Functional interface -    Stream method    -       Method     -   example
+BinaryOperator            reduce               T apply(T, T)      (a,b)-> a+b
+Comparator                max, min, sorted     compare(T,U)       (a,b)-> a-b
+Consumer                  peek                 accept(T)          (a) -> System.out.print("hello")
+BiConsumer                collect, forEach     accept(T,U)
+Function                  flatMap, map         R apply(T)         (s) -> s.replace('a','b');
+UnaryOperator             iterate              T apply(T)         (s) -> s+1
+Predicate                 allMatch,anyMatch
+                          dropWhile,Filter,    boolean test(T)    (t) -> t>0
+                          iterate,noneMatch,
+                          takeWhile
+Supplier                  collect,generate     T get()            () -> String::new
+
+2-
+mapToInt exists in Stream
+while map exists in IntStream.
+
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+public class Test {
+
+    public static void main(String[] args) {
+        // Using an IntStream
+        System.out.println("Output from an IntStream using map");
+        IntStream.iterate(5, (t) -> t + 5)
+                .limit(5)
+                .map((s) -> s * 1000)
+                .forEach((s) -> System.out.print(s + " "));
+
+        // Using a Stream<Integer>
+        System.out.println("\nOutput from an Stream using mapToInt");
+        Stream.<Integer>iterate(5, (t) -> t + 5)
+                .limit(5)
+                .mapToInt((s) -> s * 1000) // here the result is IntStream, hence u can use map...
+                .map((s) -> s / 1000)
+                .mapToInt((s) -> s * 1000) // mapToInt not exists in IntSteam, hence its compiler error
+                .forEach((s) -> System.out.print(s + " "));
+
+    }
+}
+
+3- flatMap:
+<R> Stream<R> flatMap (Function<? super T, ? extends Stream<? extends R> mapper)
+it perform one-to-many mapping using function lambda expression that operate on the stream
+and it returns a stream of the same of some other element.
+
+
+import section9.Course;
+import section9.Student;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Local Variable studentList will contain results
+        List<Student> studentList = Stream.of(
+                        // Stream of courses created
+                        new Course("Geometry 101", 3),
+                        new Course("Java 101", 5),
+                        new Course("History 101", 4))
+                .peek(System.out::println)
+                // Map from course object to a stream of student objects
+                .flatMap(course ->
+                        course.getStudentList().stream()
+                )
+                // Terminal operation returns list of student
+                .collect(Collectors.toList());
+
+        // Print the entire student list for all courses
+        System.out.println("Complete Student Population: ");
+        studentList.forEach(System.out::println);
+    }
+}
+
+---------------------------------------------------
+############## Optional
+1- empty():
+   returns an empty optional instance.
+2- of(T value):
+   returns an optional describing the given non-null value.
+   it will throw NPE if value T is null
+3- ofNullable(T value):
+   returns an optional describing the given value, if non-null
+   otherwise returns an empty Optional.
+   it wont throw NPE if value T is null
+
+
+Other Optional methods:               /***************** memorize ****************/
+1- isPresent:
+   boolean isPresent()
+   public void ifPresent(Consumer<? super T> action) {
+           if (value != null) {
+               action.accept(value);
+           }
+    }
+    if value is present, perform the given action with the value, otherwise does nothing.
+
+2- ifPresentOrElse:
+   void ifPresentOrElse(Consumer action, Runnable emptyAction);
+   if value present perform the given action with the value,
+   otherwise perform empty-based action
+
+3- Or:
+   Optional<T> or(Supplier supplier)
+   if value is present returns an optional describing the value,
+   otherwise returns an Optional produced by the supplying function.
+   'Or' method will ONLY be executed if value is empty...
+   Notice the difference between this method and orElseGet, in orElseGet we get the value T NOT Optional<T>
+
+4- orElse:
+   T orElse(T other)
+   if value is present return the value, otherwise return other value.
+   it will be executed in BOTH cases, whether T has a value or not...
+
+5- orElseGet:
+   T orElseGet(Supplier supplier)
+   if value is present then return the value
+   otherwise returns the result produced by te supplying function.
+   it will be executed only if T is empty...
+
+6- orElseThrow:
+   T orElseThrow()
+   if value present return the value, otherwise throw NoSuchElementException
+   T orElseThrow(Supplier exceptionSupplier)
+    if value present return the value, otherwise throw an exception produced by the exception
+    supplying function.
+
+---------------------------------------------------
+############## allMatch , findAny, findFirst
+
+boolean allMatch(Predicate<? super T> predicate>)
+boolean anyMatch(Predicate<? super T> predicate>)
+boolean noneMatch(Predicate<? super T> predicate>)
+Optional<T> findAny()
+Optional<T> findFirst()
+
+filter is not a terminal operation
+
+----------------------------------------------------
+##################### max, min, sum, average (reduction operation)
+
+long count()
+Optional<T> max(Comparator<? super T> comparator)   // return Optional, cant be assigned directly to primitive      /*********** TRICKY **********/
+Optional<T> min(Comparator<? super T> comparator)    // return Optional, cant be assigned directly to primitive     /*********** TRICKY **********/
+Optional<T> reduce(BinaryOperator<T> accumulator)   // perform reduction and return Optional value if any..             /**************** MEMORIZE *****************/
+T reduce(T identity, BinaryOperator<T> accumulator)  // perform reduction on the element using provided identity          /**************** MEMORIZE *****************/
+                                                     // value and associative accumulation function and returns reduced value
+Note:
+1- u can convert from Stream to IntStream, IntDouble by using mapToInt, mapToDouble...etc...
+            Stream.of(1, 2, 3, 4)
+                    //.mapToInt(s -> s)
+                    .mapToDouble(s->s)
+                    .forEach(System.out::println);
+
+2- if u want convert back from IntStream, DoubleStream to Stream then u can use Boxed()
+           new Random().ints(1, 100_000)
+                       // Transform from an IntStream to Stream<Integer>
+                       .boxed()
+                       // Limit by the limit variable which changes
+                       .limit(limit).collect(Collectors.toList());
+
+3- sum, average are not in Stream, they are method in IntStream, LongStream... etc
+
+4- if u want to get sum in stream, then u should use reduce method
+
+5- sum method return int, while average() and max, min return OptionalInt, OptionalLong,
+
+------------------------------------------------------
+############ Sorted
+
+Class must implement Comparable in order to use Sorted methods,
+
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
+
+class Guest implements Comparable<Guest> {
+    protected String first;
+    protected String last;
+
+    // Constructor
+    Guest(String first, String last) {
+        this.first = first;
+        this.last = last;
+    }
+
+    public String toString() {
+        return this.last + ", " + this.first;
+    }
+
+    public int compareTo(Guest o) {
+        return last.compareToIgnoreCase(o.last);
+    }
+
+    public static int sortByFirst(Guest g1, Guest g2) {
+        return g1.first.compareToIgnoreCase(g2.first);
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        // Test data
+        List<String> initialData = List.<String>of("One", "Two", "Three",
+                "Four", "Five", "Six", "Abc");
+
+        // HashSet is unordered
+        Set<String> unOrderedSet = new HashSet<String>(initialData);
+
+        System.out.println("---- UnOrdered Stream ");
+        // Stream<Stream> created, Print each element
+        initialData.stream()
+                // print each element
+                .forEach((s) -> System.out.print(s + " "));
+
+        System.out.println("\n---- Using sorted operation on Stream");
+        initialData.stream()
+                // Uses Natural Order, alphabetical
+                .sorted()
+                // print each element
+                .forEach((s) -> System.out.print(s + " "));
+
+        System.out.println("\n---- Using sorted with Stream of Guest");
+
+        Stream.of(new Guest("Ann", "Jones"),
+                        new Guest("Bob", "Smith"),
+                        new Guest("Carol", "Green"))
+                .sorted() // Guest must implement Comparable in order to sort the collection, otherwise will show ClassCastException.....        /********* TRICKY **************/
+                .sorted(Comparator.naturalOrder()) // Guest MUST implement Comparable in order to use naturalOrder() method, otherwise it will show compiler error,
+                // the difference with above example in sorted() -> it show runtime error class cast exception, but here we getting compiler error.
+                .sorted((s, t)->s.last.compareToIgnoreCase(t.last)) // or we can use lambda expression
+                .sorted(Guest::sortByFirst) // here u can use your own custom method reference , so Guest does not have to implement Comparable
+                .forEach((s) -> System.out.println(s.first + " " + s.last));
+
+        System.out.println("\n---- Stream with multiple sorts/peeks");
+        initialData.stream()
+                // Pass a Comparator that sorts by length of String value
+                .sorted((s, t) -> s.length() - t.length())
+                .peek((s) -> System.out.println(s + " "))
+                // Uses Natural Order, alphabetical, same as sorted() with
+                // no argument
+                .sorted(Comparator.naturalOrder()) // note Comparator::reverseOrder , Comparator::naturalOrder an not valid method reference for sorted method,
+                // bcoz they not match the method signature of Comparator...
+                .forEach((s) -> System.out.print(s + " "));
+
+    }
+}
+
+----------------------------------
+##################### Collectors
+
+- Mutable collections:
+toCollection(), toConcurrentMap(), toList(), toMap(), toSet.
+- Immutable collections: (will return a list)
+toUnmodifiableList(), toUnmodifiableMap(), toUnmodifiableSet(),
+
+- Reduction operators provided by the collectors class:
+1- averagingDouble, averagingInt, averagingInt, averagingLong:
+   provide average fpr elements passed to it.
+2- counting:
+   count elements
+3- joining: (will return String...)
+   join String or CharSequence into one
+4- maxBy, minBy
+5- summingDouble, summingInt, summingLong.
+
+examples:
+
+        List<String> firstList = originalList.stream().map((s) -> s + "ish")
+                .collect(Collectors.toList()); // notice that Collectors return a list...
+
+        String joinedExample1 = originalList.stream()
+                .collect(Collectors.joining());  // using joining will return a string...
+
+##################### Collectors, grouping
+
+groupingBy(Function f)
+groupingBy(Function f, Collector c) // it will return a Map<type, count> for example....
+groupingBy(Function f, Supplier s, Collector c)
+
+partitioningBy(Predicate p)
+partitioningBy(Predicate p, Collector c) // it will return   Map<Boolean, List<Pet>> for example....
+
+examples:
+
+        // groupingBy Type, and calculate the count....
+
+        - petPopulation.stream()
+                // Collects to Map<String,Long> where key=pet type
+                .collect(Collectors.groupingBy(Pet::getType,
+                        Collectors.counting())) // this collect will return a map of Map<Type, count>
+                // Create a stream from Map.entrySet()
+                .entrySet().stream()
+                // Sort stream by pet type (key for Map)
+                .sorted((s, t) -> s.getKey().compareTo(t.getKey()))
+                // Print element: a key/value pair
+                .forEach(System.out::println);
+
+         - results:
+
+         Cat=631
+         Chinchilla=640
+         Dog=618
+         Ferret=630
+
+         // partitioning By
+
+                 Map<Boolean, List<Pet>> dogsAndNotDogs =
+                         petPopulation.stream().collect(
+                                 // Map<Boolean,List<Pet>
+                                 Collectors.partitioningBy(s -> s.getType().equals("Dog"))
+                         );
+
+-----------------------------------------------
+Notes:
+- Collectors.toMap:
+allows you to take a stream of elements and produce a map
+where entry and the element have 1 one-to-one relationship.
+key must be also unique or u will get an exception.
+
+- Collectors.groupingBy:
+allows u to take a stream of elements and produce a map where a mapped
+entry and the element have a one-to-many relationship.
+
+- distinct()
+returning a stream consisting of the distinct elements
+according to Object.equals(object)
+
+
+example below:
+
+
+import section9.Pet;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+        List<Pet> petPopulation = Stream.generate(Pet::new)
+                //.distinct() // it will get distinct objects by this using equals(Object o)
+                .limit(5)
+                .collect(Collectors.toList());
+
+        petPopulation.forEach(System.out::println);
+
+        System.out.println("--- Group by Pet using groupingBy ---");
+        // Take list of Pet, collect into a Map using groupingBy
+        // chain to stream of Entry and print key,values.
+        petPopulation.stream()
+                .collect(
+                        // groupingBy with a single argument
+                        Collectors.groupingBy(Pet::getType))
+                .entrySet()
+                .stream()
+                .forEach(System.out::println); // notice the output here is one-to-many,Pig=[Pet{type='Pig', name='Barkley', owner='Don', age=6}] (we have list of pets)....
+
+        System.out.println("--- Group by Pet using toMap ---");
+        // Take list of Pet, collect into a Map using toMap
+        // chain to stream of Entry and print key,values.
+        petPopulation.stream()
+                //.distinct() // toMap must not contain duplicate keys, thats why we use distinct here, if there is a duplicate keys then it will show runtime error
+                .collect(
+                        // toMap requires at least 2 arguments
+                        Collectors.toMap(p -> p.getType() + "_" + p.getName(),
+                                p -> p))
+                .entrySet()
+                .stream()
+                .forEach(System.out::println); // notice the output here is one-to-one, Pig_Barkley=Pet{type='Pig', name='Barkley', owner='Don', age=6} (we have one Pet object only...)
+
+
+    }
+}
+--------------------------------------------
+
+tricky question:
+
+import section9.Pet;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create three different Lists of Pet objects
+        List<Pet> petList1 = List.of(new Pet(), new Pet(), new Pet());
+        List<Pet> petList2 = List.of(new Pet(), new Pet(), new Pet());
+        List<Pet> petList3 = List.of(new Pet(), new Pet(), new Pet());
+
+        // Create List of List of Pets
+        List<List<Pet>> listOfPets
+                = List.of(petList1, petList2, petList3);
+
+        System.out.println("--- List of lists ---");
+        listOfPets.forEach(System.out::println);
+
+        // Create a list (outside of the stream)
+        List<Pet> fullList = new ArrayList<Pet>();
+        listOfPets.stream()
+                // Collect all elements into fullList
+                .map(s -> fullList.addAll(s))
+                // Non-short-circuiting terminal operation
+                .allMatch(p -> p != null);
+        System.out.println("--- Full list ---");
+        fullList.forEach(System.out::println);
+
+        System.out.println("--- Create Full list with flatMap---");
+        listOfPets.stream()
+                // Turns a List<Pet> to Stream<Pet>
+                //.flatMap(Collection::stream) // this will flat the list
+                //.flatMap(Stream::of) //this will not flat the list ...               /******* TRICKY ************/
+                .flatMap(s -> s.stream())// this will flat the list
+                //.collect(Collectors.toList())
+                .forEach(System.out::println);
+
+        System.out.println("--- Putting it all together---");
+        listOfPets.stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.groupingBy(Pet::getType))
+                .entrySet()
+                .stream()
+                .forEach(System.out::println);
+
+    }
+}
+---------------------------------------------------
+
+tricky question #2:
+
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        List aList = List.of("January", "February");
+        List bList = List.of("January", "September");
+        List cList = List.of("February", "April");
+
+        Stream.of(aList, bList, cList)
+                .distinct()     // Line 1 (this will compare if list1.equal(list2) . they should be same items and SAME order....
+                .flatMap(Collection<String>::stream)  // Line 2
+                // .distinct() // (after flating the streams,, then we have the items only NOT the LIST anymore...) if u added here then it will print unique resutls.
+                .peek(s -> System.out.print(s + ","))
+                .allMatch(s -> s.length() >= 5);  // Line 3
+
+    }
+}
+
+------------------------------------------------------------
+
+tricky question #3
+
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        System.out.println(
+                Stream.iterate(10, t -> t <= 30, (t) -> t + 10)
+                        .mapToInt((s) -> s * 1000) // Line 1
+                        .map((s) -> s / 1000) // Line 2
+                        //.mapToInt() // compiler error, bcoz currecnt stream already IntStream....
+                        //.boxed() // this will convert it to Stream, and Stream does not have average, hence it will show compiler error at line 3
+                        .average()); // Line 3
+
+    }
+}
+-------------------------------------------------
+
+tricky question #4
+
+enum Category {
+    FRUIT, VEGETABLE;
+}
+
+class ProduceItem {
+    private Category category;
+    private String value;
+
+    ProduceItem(Category category, String value) {
+        this.category = category;
+        this.value = value;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public String toString() {
+        return value;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        Stream.of(
+                new ProduceItem(Category.FRUIT, "Apple"),
+                new ProduceItem(Category.VEGETABLE, "Broccoli"),
+                new ProduceItem(Category.FRUIT, "Pear")
+        ).collect(Collectors.partitioningBy(
+                c -> c.getCategory() == Category.VEGETABLE)) // Line 1
+                .values().stream()  // Line 2
+                .forEach(System.out::print);
+
+    }
+}
+[Apple, Pear][Broccoli] // notice it started with [Apple, Pear] not with [Broccoli], explanation below:
+The collect terminal operation creates a Map<Boolean><List<ProduceItem>>, keyed by false and true values. The false key is first and contains the Fruit ProduceItems.
+
+------------------------
+
+

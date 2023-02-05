@@ -1,0 +1,306 @@
+##################################### Exception handling and Assertions #########################
+#### try with resource
+1- the param inside try with resource MUST implement java.lang.AutoCloseable.
+2- resources are closed automatically in the reverse order .
+3- catch and finally blocks are optional.
+
+example:
+
+try (FileReader fileReader = new FileReader(fileName)) {
+//
+}
+
+OR
+
+FileReader fileReader = new FileReader(fileName);
+try (fileReader) {
+
+}
+
+4- u can also have multi resource separated by ;
+try (FileReader fileReader = new FileReader(fileName);
+     FileWriter fileWriter = new FileWriter(outputFile)
+) {
+//
+}
+
+fileWriter will be closed first then FileReader...
+
+example:
+// try also to throw runtime exception in Door and alarm to explore more suppressed exceptions...
+
+// Make the Door AutoCloseable
+class Door implements AutoCloseable {
+
+    public void run() {
+     throw new RuntimeException("cant run door");
+    }
+
+    // Must Implement close() method, which is invoked in the
+    // implicit finally clause of try-with-resources statement
+    public void close() {
+        System.out.println("Executing close(): The door is closing");
+    }
+
+    // Forcing an Exception to see what happens
+    public void doSomething() throws NullPointerException {
+        throw new NullPointerException(this.getClass().getName() +
+                " is null");
+    }
+}
+
+// Make the Alarm AutoCloseable
+class Alarm implements AutoCloseable {
+
+    // Must Implement close() method, which is invoked in the
+    // implicit finally clause of try-with-resources statement
+    public void close() {
+        System.out.println("Executing close(): The alarm is armed");
+    }
+
+    public void run() {
+         throw new RuntimeException("cant run Alarm");
+   }
+}
+
+// Class to test basic try-with-resources statement
+public class Test {
+    public static void main(String[] args) {
+
+        /************
+         * Note:
+         * 1- when we throw an exception from try block, first it will close resources in opposite order.         /********* MEMORIZE **********
+         *    then will catch the exception in catch block, then execute final block
+         * **************/
+        // Very simple example, to confirm that resources are
+        // closed in reverse order of their declaration here...
+        try (Alarm a = new Alarm();
+             Door d = new Door()) {
+
+            d.doSomething();
+            a.run();
+            d.run();
+
+        } catch (NullPointerException ne) {
+            System.out.println(ne);
+        }
+        // We can use finally clause with try-with-resources
+        finally {
+            System.out.println("Resources are closed so I can go.");
+        }
+
+    }
+}
+
+--------------------------------------------------------
+########### Assertions
+1- by default assertion not enabled.
+2- to enable assertion u can enable it from command line:
+   java -enableassetions <your package name>
+
+   OR:
+   from ide add in VM options
+   -ea (-enableassetions)
+
+example below:
+remember to add -ea in vm options
+
+
+public class Test {
+
+    static {
+        boolean startupAllowed = false;
+
+        // startupAllowed will be true ONLY if assertions are enabled
+        // otherwise statement is simply ignored.
+        assert startupAllowed = true;
+
+        // The following statement prevents the class from loading...
+        if (!startupAllowed)
+            throw new RuntimeException("Assertions must be enabled!!!");
+    }
+
+    // enum maintains detailed messages Assertion Errors.
+    enum assertFlags {
+        BYTE_OUT_OF_RANGE("Value is out of range for a byte");
+
+        private String message;
+
+        assertFlags(String message) {
+            this.message = message;
+        }
+    }
+
+    // Method to be used by assert statement to populate detailed message
+    public static String getAssertMessage(assertFlags aflag) {
+        return "Method returns " + aflag.message;
+    }
+
+    public static void printAssertMessage(assertFlags aflag) {
+        System.out.println("Method returns " + aflag.message);
+    }
+
+    public static void main(String[] args) {
+        byte s2;
+
+        // Value below exceeds Byte Max Value
+        short maxValue = Byte.MAX_VALUE + 1;
+
+        //  assert that value is within the proper range for byte
+        // the below expression means it will evaluate maxValue >= Byte.MIN_VALUE && maxValue <= Byte.MAX_VALUE
+        // and if its true it will proceed to next statement, if false then it will throw expression with messgae assertFlags.BYTE_OUT_OF_RANGE    /************ TRICKY **********/
+        // u can return the message as string also can,
+        // but if u try to return void then its a compiler error...see the code below its compiler error....
+        assert maxValue >= Byte.MIN_VALUE && maxValue <= Byte.MAX_VALUE :
+                printAssertMessage(assertFlags.BYTE_OUT_OF_RANGE);              /*********** TRICKY ***********/
+
+        assert maxValue >= Byte.MIN_VALUE && maxValue <= Byte.MAX_VALUE :
+                assertFlags.BYTE_OUT_OF_RANGE;
+
+        // Casting short to a byte could lead to undetected overflow..
+        s2 = (byte) maxValue;
+
+        // Printing short value prints the 'actual expected value'
+        System.out.println("Short value = " + maxValue);
+
+        // Printing byte value shows maximum value overflowed.
+        System.out.println("Byte value = " + s2);
+
+    }
+}
+
+2- lets say u have 2 classes and u want to enable assertion in one class
+   and disable it in other class then this is the command to disable the assertion in specific class:
+   -ea da:<class name, example com.alammar.Test>
+
+3- enable assertion in all packages:
+   -ea:assertion... (enable assertion in all classes inside package name assertion)
+
+4- enable assertion for all classes EXCEPT system classes:
+   java -ea
+
+   disable assertion for all classes EXCEPT system classes:
+   java -da
+
+   enable/disable assertions for specified class, can include system class:
+   java -ea:assertion.AssertionExample (enable)
+   java -da:assertion.AssertionExample (disable)
+
+   enable/disable assertion for specified package include sub packages:
+   java -ea:assertion...
+   java -da:assertion.invariant... (disable assertion in package assertion.invariant and all sub packages)
+
+
+-------------------------------------
+
+out of ordinary:
+close method in AutoCloseable does throw Exception in its method signature,
+so subclass can throw same exception or more specific exception...
+
+
+class Door implements AutoCloseable{
+    @Override
+    public void close() throws Exception {
+
+    }
+
+//    @Override
+//    public void close() throws Throwable { // compiler error            /********* TRICKY ***********/
+//
+//    }
+}
+
+public class Test {
+
+
+    public static void main(String[] args) {
+
+    }
+}
+
+----------------------------
+
+Tricky question:
+class FirstException extends RuntimeException {}
+
+class SecondException extends ArithmeticException {
+    SecondException(String message, ArithmeticException e) {
+    }
+}
+
+class ThirdException extends /* Insert here */ {
+    ThirdException(String message) {
+        super(message);
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+        new Test().testMethod();
+    }
+
+    private void testMethod() {
+        throw new ThirdException("Oops");
+
+    }
+}
+Which class can ThirdException extend so that the code will compile without any other changes?
+
+A.  Exception
+
+B.  FileNotFoundException
+
+C.  FirstException
+
+D.  Error (correct answer)
+Error is an unchecked exception, so extended Error allows ThirdException to
+be unchecked and surrounding code does not need to satisfy the specify/catch requirement.
+
+E.  SecondException
+
+F.  None of the above
+
+-----------------------------------------------
+the below example very tricky                          /*************** TRICKY *************/
+below example will try to throw exception in close method itself...
+
+class FirstCloseable implements AutoCloseable {
+    public void close() {  // Line 1
+        System.out.println("first trying to close");
+        throw new IllegalStateException("First could not close");
+    }
+
+    public void run() {
+        System.out.println("Running First");
+    }
+}
+
+class SecondCloseable implements AutoCloseable {
+    public void close() throws Exception {  // Line 2
+        System.out.println("second trying to close");
+        throw new IllegalStateException("Second could not close");
+    }
+
+    public void run() {
+        throw new IllegalStateException("Second could not run");
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        FirstCloseable first = new FirstCloseable();
+        try (first; SecondCloseable second = new SecondCloseable()) {  // Line 3
+            first.run();
+            second.run();
+        } catch (Exception e) { // enable debug mode and see the suppressed exceptions....
+            //System.out.println(e); // here it will orint only the first exception that has been thrown which is Second could not run
+            //e.printStackTrace(System.out); // notice it will print full stack trace here
+            // in the stack trace u will see that :
+            //     Second could not run -> then it try to close second but exception thrown too Second could not close
+            // then it try to clone First but exception thrown too First could not close
+        }
+    }
+}

@@ -1,0 +1,885 @@
+1- all wrappers implements Comparable interface and have compareTo method
+
+2-  * compareTo for numerics (Float, Long, Integer..):
+     - 0 if both equal
+     - 1 if wrapper value > parameter value
+     - -1 if wrapper value < parameter value
+
+     * compareTo for Boolean:
+     - 0 if both equal.
+     - 1 if wrapper is true and parameter is false.
+     - -1 if wrapper is false and parameter is true.
+
+     * compareTo for Character wrapper:
+     - 0 if both equal.
+     - positive number n, if wrapper value > param value, where n represent the difference in value.
+     - negative number -n, if wrapper value < param value, where n represent the difference in value.
+
+     * equals(Object o);
+     - if Object o is null, always returs false.
+
+     * valueOf in wrapper:
+     - all wrappers support valueOf("TRUE"); they accept it as String EXCEPT Character it accept only char:
+       Character.valueOf('A');                  /************** TRICKY ******************/
+
+3- Boolean.valueOf(null) will return false
+
+4- Integer.getInteger is different from Integer.valueOf, the first one read value from system properties
+   and return null if value not exists.
+
+5- Notice the output when using equals for wrapper classes:
+   [Integer(100)].equals([Integer(100)] = true
+   [Integer(100)].equals([Short(100)] = false
+   [Integer(100)].equals([Short(100)] = false
+
+   // key take note they must be exactly same type...
+
+6- Tricky question:
+
+
+public class Test {
+    public static void main(String[] args) {
+
+        Integer i = 10;
+        short j = 10;
+
+        // A wrapper used in most operations is unboxed prior to the
+        // operation
+
+        // result of a wrapper and primitive can be assigned to a primitive
+        // variable
+        int intResult = i + j;
+
+        // result of a wrapper and primitive can be assigned to a wrapper
+        // variable
+        Integer integerResult = i + j;
+
+        // result of a wrapper and primitive can be assigned to a
+        // LVTI variable using var
+        var result = i + j;
+
+        System.out.println("intResult (type int) = " + intResult);
+        System.out.println("integerResult (type Integer) = " + integerResult);
+        System.out.println("result (LVTI) = " + result);
+
+        System.out.println(result.getClass().getName()); /// compiler error bcoz result is primitive int.....     /************* TRICKY ******************/
+        short shortResult = i + j; // compiler error , cant assign int to short, even tho u try to change type i to Short it will still same error, becoz operator + will promote the value to int .... /************* TRICKY ******************/
+        Short shortWrapperResult = i + j; // compiler error , required Short and provided int...  /************* TRICKY ******************/
+        /**********
+         * Note: the any operator we do for type smaller than int, it will first be promoted to int then evaludate the operation.....
+         *
+         * **********/
+
+        Integer k = 10;
+        Short s = Short.valueOf("10");
+        int m = 10;
+        if (s instanceof Number) { // cant use instanceof with primitve type, it should be wrapper object.....
+            System.out.println(" s is instance of Number ");
+            if (s instanceof Integer) { // cant cast Short to Integer, u must change s declaration to : Number s = Short.valueOf("10");
+                System.out.println(" m is instance of Integer ");
+            }
+        }
+    }
+}
+---------------------------------------------------------
+####### Generics
+
+diamond is just a shortcut so u dont have to repeat same type in right side too...
+
+1- diamond declaration can be only used if the left hand side was the declaration:
+   GenericClass<String> genericString = new GenericClass<>(); // OKAY
+
+   GenericClass<String> genericString;
+   genericString = new GenericClass<>(new StringBuilder("hello")); // compiler error, genericString was declared as string and here u assigning StringBuilder... /**************** TRICKY *******************/
+
+   generic1 = new GenericallyTypedClass(new StringBuilder("hello")); // OKAY, but it will show runtime exception when u try to get the object...
+   System.out.println(generic1.currentObj); // runtime exception
+
+   // u can also declare it as rawType but in that case it will be Object by default and u need to do casting...
+   GenericallyTypedClass generic2 =
+                   new GenericallyTypedClass(new StringBuilder("hello"));
+
+   ((StringBuilder)generic2.currentObj).reverse(); // notice need casting....
+
+2- cant extend Throwable or exception or any custom throwable or any custom exception....
+   this restriction is needed since the catch mechanism in JVM works only with non-generic...
+
+   class GenericallyTypedClass<T> extends Exception { // cant extend any type of exceptions from generic...
+
+   }
+
+3- Cant use instance Of with generics:
+
+    public static void main(String[] args) {
+        GenericallyTypedClass<String> str = new GenericallyTypedClass<>();
+
+        if (str instanceof GenericallyTypedClass) {
+            System.out.println("OKAY");
+        }
+
+        if (str instanceof GenericallyTypedClass<String>) { // Compiler error...
+
+        }
+
+    }
+
+4- Tricky:
+
+    public static void main(String[] args) {
+        GenericallyTypedClass<Number> genericNumber = new GenericallyTypedClass<>();
+        GenericallyTypedClass<Integer> genericInteger = new GenericallyTypedClass<>();
+
+        Number n = 10;
+        Integer i = 20;
+
+        genericNumber = genericInteger; // Compiler error
+        //Inconvertible types; cannot cast 'GenericallyTypedClass<java.lang.Integer>' to 'GenericallyTypedClass<java.lang.Number>'
+        genericNumber = (GenericallyTypedClass<Number>)genericInteger;   // Compiler error
+
+        n = i; // OKAY....
+        /****
+         * Note:
+         * eventho Integer is subtype of Number but that does not means that
+         * GenericClass<Integer> is subClass of GenericClass<Number>
+         * thats why we cant assign:
+         *    genericNumber = genericInteger
+         * ***/
+
+    }
+
+5- cannot overload a method where formal param type is same type
+  // invalid method have same erasures
+  private void methodA(GenericClass<String> s) {}
+
+  private void methodA(GenericClass<Number> s) {}
+
+6-cant catch or throw objects declared as with type parameter.
+  class GenericClass<T extends Throwable>
+  .....
+
+  try {
+
+  } catch (T e) { // compiler error, cannot catch typed parameter.
+
+  }
+
+7- Upper Bound:
+   class GenericallyTypedClass<T extends Exception> {
+
+   }
+
+   means any Generic should extend Exception class...
+
+   // below example means it must extend Number and implement Comparable and Serializable
+   public class GenericBounded<T extends Number & Comparable & Serializable>
+
+8- we cant duplicate bounded class in generic, example:
+   public class GenericBounded<T extends Number & Comparable<Integer> & Comparable<Short>> // compiler error
+
+---------------------------------------------------------
+####### Generics Methods
+
+1- generic method looks like:
+
+   <Type Parameter> <Results>        <MethodDeclaration>
+   <T>               T               getValue(T t) {
+     return t;
+   }
+
+2- cant use static in generic class like this:
+
+class GenericClass<T> {
+    public static String str ="OKAY";
+    public static T strGeneric; // compiler error....
+
+    static T getValue() { // cant use static in generic class.
+
+    }
+}
+
+3- example about generic method in non-generic class:
+
+// a non-generic class with generic methods
+class NonGenericClass { // if lets say u make this class generic like : NonGenericClass<T> then T here is DIFFERENT AND NOT RELATED TO T in generic method....
+
+    // constructor declared with type parameter T.
+    // Method's single argument restricted to method type parameter
+    <T> NonGenericClass(T aGenericParameter) {
+        System.out.println("NonGenericClass: generic constructor: " +
+                aGenericParameter.getClass().getName());
+    }
+
+    // static method with type parameter
+    // Method's single argument restricted to method type parameter
+    public static <T extends Throwable> T genericStaticMethod(T aGenericParameter) { // notice here we can use static and return T type,bcoz T is in generic method
+                                                                                     // and its not in class level,,,,
+        System.out.println("NonGenericClass: static generic method: " +
+                aGenericParameter.getClass().getName());
+        return aGenericParameter;
+    }
+
+    // instance method with type parameter
+    // Method's single argument restricted to method type parameter
+    public <T> void genericInstanceMethod(T aGenericParameter) {
+        System.out.println("NonGenericClass: instance generic method: " +
+                aGenericParameter.getClass().getName());
+    }
+}
+
+---------------------------------------------------------
+####### Generics wildcards
+
+Types of wildcards:
+1- unbounded <?>                 /***************** TRICKY **************/
+   parameter that is declared with List<?> is NOT same as List<Object>.
+   List<?> will accept list of any type.
+   List<Object> will only accept list that contains Object.
+
+   remember List<Integer> does not meet the isA test for List<Object>.
+
+2- Upper Bound <? extends Number>  /************** MEMORIZE *************/
+   for example Number and its subclasses are allowable types in this example,
+
+3- Lower Bound <? super Exception>   /************** MEMORIZE *************/
+    Exception and its superclass Throwable and object allowed,
+    can be interpreted as Exception is allowed and any type
+    that is a superclass or supertype of Exception.
+
+NOTE:
+wildcard ? cant be used in class level, u will notice that its only used in method level.....
+
+example about the syntax of ? :
+### invalid declaration of wildcard :
+1. class A<?>{}
+2. class A<? extends Number>{}
+3. new ArrayList<?>();
+4. ArrayList<?> al5=new ArrayList<?>();
+5. ArrayList<? extends Number> al9=new ArrayList<?>(); // cant use wildcard in right side of init....
+6. class WildcardTests<T> {
+
+       // VALID
+       public static <U> void doSomething(U u) {
+           System.out.println(u);
+       }
+
+       // COMPILER ERROR.....
+       private <? extends Number> void doSomething() {
+
+       }
+
+   }
+7. WildcardTests.<?>doSomething("Hello"); // cant use wildcard to call generic method...
+
+### valid wildcard declaration:
+1.ArrayList<?> al=new ArrayList<String>();
+2.ArrayList<?> al2=new ArrayList();
+3.ArrayList<? extends Runnable> al3=new ArrayList();
+4.ArrayList<? super Runnable> al4=new ArrayList();
+5.ArrayList<? super Runnable> al5=new ArrayList<Object>();
+6.ArrayList<? super Runnable> al6=new ArrayList<Runnable>();
+7.ArrayList<? extends Runnable> al7=new ArrayList<Runnable>();
+8.ArrayList<? extends Runnable> al8=new ArrayList<Thread>();
+9.ArrayList<? extends Object> al9=new ArrayList<Double>();
+10. WildcardTests.<String>doSomething("Hello"); // generic method....
+
+
+example below:
+
+import java.util.ArrayList;
+import java.util.List;
+
+class TestWildCard {
+
+    // compiler error bcoz same erasure
+//    public void foo(List<?> param) {
+//        String str = (String) param.get(0);
+//        System.out.println("STR=" + str);
+//    }
+
+    public void foo(List<Object> param) {
+        String str = (String) param.get(0);
+        System.out.println("STR=" + str);
+    }
+
+    public void foo2(List<?> param) {
+        String str = (String) param.get(0);
+        System.out.println("STR=" + str);
+    }
+
+}
+
+public class Test {
+    public static void main(String[] args){
+        List<String> listStr = List.of("one","two");
+        List<Object> listObj = List.of("one","two");
+
+        TestWildCard testWildCard = new TestWildCard();
+        //testWildCard.foo(listStr); // compiler error, expected List<Object> but u provide List<String>, remember that:
+        // String is A Object, but that does not means List<String> is A List<Object>
+        testWildCard.foo2(listStr); // okay bcoz List<?> accept anything....
+
+        testWildCard.foo(listObj); // okay bcoz its list of object.....
+
+    }
+}
+
+8- cant have two overloaded method with same erasure (one extend and one super...):
+   example:
+
+   public static void printList( List<? extend Exception> list) { // compiler error...
+   ///
+   }
+
+   public static void printList( List<? super Exception> list) {
+   ///
+   }
+
+9- Integer is subtype of Number, Object.
+
+10- List<Integer> is subtype of Object and NOT subtype of List<Number>        /********** TRICKY *********/
+
+11- Tricky question:
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+
+    public static void main(String[] args) {
+        ArrayList<Integer> intArray = new ArrayList<>();
+
+        // Generics allow us to express a hierarchical relationship for
+        // contained class using wildcards
+        ArrayList<? extends Number> numberList = intArray;  // OKAT bcoz its using upper bound
+
+        numberList.add(Integer.valueOf(1)); // compiler error, check https://stackoverflow.com/questions/2776975/how-can-i-add-to-list-extends-number-data-structures
+
+        ArrayList<Integer> intArray2 = (ArrayList<Integer>) numberList; // CAN CAST ALSO...
+
+        //ArrayList<Number> numberList2 = intArray; // compiler error, required  ArrayList<Number> provided ArrayList<Integer>
+
+        List<Number> numbers = new ArrayList<>();
+        numbers.add(Short.valueOf((short) 1));
+        numbers.add(Integer.valueOf(1));
+        numbers.add(Double.valueOf(1));
+
+        // ArrayList<Integer> integerArrayList2 = (ArrayList<Integer>) numbers; // compiler error bcoz number is not upper bounded....
+
+    }
+
+}
+
+12 - tricky question:
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List<Long> list1 = new ArrayList<Long>(); // Line 1
+        list1.add(5);   // Line 2, error, it must be 5L or 5l...
+
+        List<? extends Number> list2 = null;  // Line 3
+
+        if (list1 instanceof List<?>) { // OKAY, NO compiler error.....
+            list2 = list1;      // Line 5
+        }
+
+        System.out.println(list2);
+    }
+}
+
+13- tricky question 2:
+
+public class Test {
+    public static void main(String[] args) {
+        Test test = new Test();
+        List<? extends Number> items =
+                new ArrayList<Integer>(Arrays.asList(1, 2, 3));  // Line 1
+        /*  Insert statement here */
+
+    }
+
+    public <T> void printItOut(T type) {
+        System.out.println(type);
+    }
+}
+Which of the following statements can be inserted at /* Insert Here */ in the code sample above so that the code compiles and outputs:  [1, 2, 3]
+
+
+
+A.   test.printItOut(items);
+
+B.   test.<Object>printItOut(items);
+
+C.   test.<List<?>>printItOut(items);
+
+D.   test.<? extends List>printItOut(items);
+
+E.   test.<List<? extends Number>>printItOut(items);
+
+
+correct answer is : all statements except D:
+You can NOT use a wild card as a type argument for a generic method.
+You’ll note that the statements represented by C and E use a type argument of type List - and the List has a type argument with wildcards which is permissable.
+
+-----------------------------------------------------------------------------------
+###################### Collections
+
+1- Map does not extends from collections..
+   Map -> SortedMap
+
+########### Set:
+1- TreeSet: Natural order or by use of Comparator constructor, NO NULL ELEMENTS ALLOWED. (if u try to add/remove null then it will throw NPE)
+
+   LinkedHashSet extends HashSet implements Set:
+   Predictable iteration order, ordered by insertion order, single null elements is allowed.
+
+   HashSet: unpredictable iteration order, single null elements is allowed.
+
+   Note:
+   u can still compare between TreeSet, LinkedHashSet and HashSet, true if same elements false otherwise...
+
+2- TreeSet has the following methods:
+   values (10, 20, 50, 40, 30):
+   - <T> lower(element t)
+     return the greatest element that less than t from the set
+     treeSet.lower(1): null
+     treeSet.lower(10): null
+     treeSet.lower(20): 10
+     treeSet.lower(50): 40
+     treeSet.lower(51): 50
+
+   - <T> floor(element t)
+     return the greatest element that less than OR equal t from the set
+     treeSet.floor(1): null
+     treeSet.floor(10): 10
+     treeSet.floor(20): 20
+     treeSet.floor(50): 50
+     treeSet.floor(51): 50
+
+   - <T> ceiling(element t)
+      return the least element that greater than or equal t from set
+     treeSet.ceiling(1): 10
+     treeSet.ceiling(10): 10
+     treeSet.ceiling(20): 20
+     treeSet.ceiling(50): 50
+     treeSet.ceiling(51): null
+
+   - <T> higher(element t)
+      return the least element that greater than t from the set.
+     treeSet.higher(1): 10
+     treeSet.higher(10): 20
+     treeSet.higher(20): 30
+     treeSet.higher(50): null
+     treeSet.higher(51): null
+
+########### List:
+
+1- sublist in list is a view of the original list,
+   so any modification on the sublist will be also reflected on the original
+   list too.
+   but if lets say u try to add/remove value on the ORIGINAL list and then try
+   to print or use the sublist then u will get concurrent modification exception.
+
+########### Queue and Deque:
+1- queue usually ordered first in first out.
+2- first element is head, last element is tail.
+3- queue does not allow null element                /************ TRICKY ***********/
+4- queue allows duplicate elements.
+
+5- queue methods:      /*********** MEMORIZE ************/
+   - add(E):
+      insert element and return true,false or IllegateStateException
+      add element to back of queue.
+   - offer(E):
+      insert element and return true,false
+      add element to back of queue.
+   - element():
+      it will return head of element.
+      it will throw exception if queue is empty.         /********** TRICKY **********/
+   - peek():
+      it will retrieve element (it wont delete it)
+      it will retrieve head of element, or null if queue is empty.
+   - remove():
+     it will retrieve and remove the element
+     it will throw exception if queue is empty           /*********** TRICKY ************/
+   - poll():
+     it will retrieve and remove the element
+     null if the queue is empty.
+
+
+- Deque:          /*********** MEMORIZE ************/
+double ended queue
+it support insert and remove from both head and tail.
+it FIFO and LIFO
+deque methods:
+  - push(E):
+    returns void and add element to head of queue
+  - pop():
+    return and remove the first element in queue.
+  - addFirst(E):
+    return void
+  - addLast(E):
+    return void
+  - offerFirst(E):
+    return true/false
+  - offerLast(E):
+    return true/false
+  - getFirst() / getLast()
+    it retrieve element without removing it,
+    throw exception if queue is empty.
+  - peekFirst()/peekLast()
+    it retrieve element without removing it,
+    null if queue is empty
+  - removeFirst()/removeLast():
+    it retrieve element and remove it,
+    exception if queue is empty.
+  - pollFirst()/pollLast():
+    retrieve element,
+    null if queue is empty.
+
+example:
+
+----------- ArrayDeque -----------
+Original values entered: [10, 20, 50, 40, 30]
+
+----------- ArrayQueue -----------
+Additional Methods, initialData : [10, 20, 50, 40, 30]
+After add(100) : true : [10, 20, 50, 40, 30, 100]
+After offer(101) : true : [10, 20, 50, 40, 30, 100, 101]
+After offer(null): java.lang.NullPointerException
+	at java.base/java.util.ArrayDeque.addLast(ArrayDeque.java:304)
+	at java.base/java.util.ArrayDeque.offerLast(ArrayDeque.java:353)
+	at java.base/java.util.ArrayDeque.offer(ArrayDeque.java:509)
+	at Test.testBasicQueueMethods(Test.java:49)
+	at Test.main(Test.java:18)
+element() returns : 10 : [10, 20, 50, 40, 30, 100, 101]
+peek() returns : 10 : [10, 20, 50, 40, 30, 100, 101]
+poll() returns : 10 : [20, 50, 40, 30, 100, 101]
+remove() returns : 20 : [50, 40, 30, 100, 101]
+
+----------- LinkedList -----------
+Additional Methods, initialData : [10, 20, 50, 40, 30]
+After add(100) : true : [10, 20, 50, 40, 30, 100]
+After offer(101) : true : [10, 20, 50, 40, 30, 100, 101]
+After offer(null) : true : [10, 20, 50, 40, 30, 100, 101, null]
+element() returns : 10 : [10, 20, 50, 40, 30, 100, 101, null]
+peek() returns : 10 : [10, 20, 50, 40, 30, 100, 101, null]
+poll() returns : 10 : [20, 50, 40, 30, 100, 101, null]
+remove() returns : 20 : [50, 40, 30, 100, 101, null]
+
+----------- ArrayDeque -----------
+Deque Methods, initialData : [50, 40, 30, 100, 101]
+After push(199) : [199, 50, 40, 30, 100, 101]
+pop() returns : 199 : [50, 40, 30, 100, 101]
+After addFirst(200) : [200, 50, 40, 30, 100, 101] /****** addFirst return void ******/
+After offerFirst(201) : true : [201, 200, 50, 40, 30, 100, 101]
+After addLast(300) : [201, 200, 50, 40, 30, 100, 101, 300] /****** addLast return void ******/
+After offerLast(301) : true : [201, 200, 50, 40, 30, 100, 101, 300, 301]
+getFirst() returns : 201 : [201, 200, 50, 40, 30, 100, 101, 300, 301]
+getLast() returns : 301 : [201, 200, 50, 40, 30, 100, 101, 300, 301]
+peekFirst() returns : 201 : [201, 200, 50, 40, 30, 100, 101, 300, 301]
+peekLast() returns : 301 : [201, 200, 50, 40, 30, 100, 101, 300, 301]
+pollFirst() returns : 201 : [200, 50, 40, 30, 100, 101, 300, 301]
+pollLast() returns : 301 : [200, 50, 40, 30, 100, 101, 300]
+removeFirst() returns : 200 : [50, 40, 30, 100, 101, 300]
+removeLast() returns : 300 : [50, 40, 30, 100, 101]
+
+----------- LinkedList -----------
+Deque Methods, initialData : [50, 40, 30, 100, 101, null]
+After push(199) : [199, 50, 40, 30, 100, 101, null]
+pop() returns : 199 : [50, 40, 30, 100, 101, null]
+After addFirst(200) : [200, 50, 40, 30, 100, 101, null]
+After offerFirst(201) : true : [201, 200, 50, 40, 30, 100, 101, null]
+After addLast(300) : [201, 200, 50, 40, 30, 100, 101, null, 300]
+After offerLast(301) : true : [201, 200, 50, 40, 30, 100, 101, null, 300, 301]
+getFirst() returns : 201 : [201, 200, 50, 40, 30, 100, 101, null, 300, 301]
+getLast() returns : 301 : [201, 200, 50, 40, 30, 100, 101, null, 300, 301]
+peekFirst() returns : 201 : [201, 200, 50, 40, 30, 100, 101, null, 300, 301]
+peekLast() returns : 301 : [201, 200, 50, 40, 30, 100, 101, null, 300, 301]
+pollFirst() returns : 201 : [200, 50, 40, 30, 100, 101, null, 300, 301]
+pollLast() returns : 301 : [200, 50, 40, 30, 100, 101, null, 300]
+removeFirst() returns : 200 : [50, 40, 30, 100, 101, null, 300]
+removeLast() returns : 300 : [50, 40, 30, 100, 101, null]
+
+######################### Map
+
+1- some implementations of Map:
+   - HashMap:
+     not ordered and allow null key and null value.
+   - TreeMap:
+     natural ordered of keys or by Comparator passed to constructor and DOES NOT ALLOW NULL KEY, and allow null values.
+   - LinkedHashMap:
+     predictable iteration order, using order of insertion of keys. and allow null key and null value.
+
+--- HashMap: {null=12, NullValue=null, George=2, Barry=1, Harold=3, Ida=4, John=5}
+--- TreeMap: {Barry=1, George=2, Harold=3, Ida=4, John=5, NullValue=null}
+--- LinkedHashMap: {Barry=1, George=2, Harold=3, Ida=4, John=5, NullValue=null, null=12}
+--- java.util.TreeMap<K,V> does not support null keys
+
+** putIfAbsent adds Key/Value if KEY doesn't exist
+   putIfAbsent(Harold, 200) : 100 : {Barry=10, George=2, John=5, NullValue=77, null=12, Harold=100} // key exist so dont do anything...
+
+** map.compute(Key, BiFunction) & computeIfPresent
+it will read the key if the key exists then it will try to update its value....
+
+Map<Integer, Integer> data = new HashMap<>();
+data.put(1, 10); // MAP = (1: 10)
+System.out.println(data.computeIfPresent(1, (key, val) -> val + 1)); // print 11, MAP = (1: 11)
+System.out.println(data.computeIfPresent(2, (key, val) -> val + 1)); // null
+
+on the other hand, map.compute will assume that the key IS NOT NULL and if key is NULL then it will throw NPE exception...
+Note: compute will add to map if key not exists....
+      computeIfPresent will only compute if the key is presented....
+
+** map.computeIfAbsent(key, BiFunction):
+The computeIfAbsent, as compute-if-absent, will put the value (and return it) in
+the map only if the current key is not existent in the map
+
+Map<Integer, Integer> data = new HashMap<>();
+data.put(1, 10);
+System.out.println(data.computeIfAbsent(1, 20)); // print 10, MAP = (1: 10)  // still same bcoz key exists....
+System.out.println(data.computeIfAbsent(2, 30)); // print 30, MAP = (1: 10, 2: 30);
+
+2- merge function in map:
+   - lets say we have the original map:
+     {Barry=1, George=2, Harold=3, Ida=4, John=5}
+
+   - lets use: m.merge("Mary", 100, (key, val) -> val / 3));
+     - If Mary exists and is not null, use the function: means it will use: (key, val) -> val / 3)
+     - If Mary exists, and value is null, use the value, not the function: means it will use : 100
+     - If Mary exists and the value not value, and return value of the function is null, Mary
+       gets removed from map.
+       m.merge("Mary", 100, (key, val) -> null)) // this will delete Mary from the Map...
+     - If Marry does not exist, use the value, not the function
+       m.merge("Nat", 100, (key, val) -> val * 2))
+
+3- Important Note about map.entrySet() and map.values():
+   u can remove directly from map using entrySet() or map.values()
+   BUT u CANT ADD to map using entrySet() or map.values()....
+
+   assume u have the following map:
+   Initial Values: {George=15, John=35, Kate=50, Mary=30, Ralph=23}
+
+   lets try to remove:
+   Set entrySet = treeMap.entrySet();
+   entrySet.remove(Map.entry("John", 25)); // it will not remove bcoz value does not match....
+   System.out.println(treeMap);
+
+   entrySet.remove(Map.entry("John", 35));   // it will remove the entry bcoz both key and value match....
+
+   ### Note 2:
+   when u iterator from map u actually taking a snapshot from original data,
+   and if u try to modify (add/remove) from original map then iterate it then it will
+   show java.util.ConcurrentModificationException
+
+example below...
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Use Map.of to populate a Map, with comma delimited values
+        // representing key1, value1, key2, value2 etc.
+        Map<String, Integer> treeMap = new TreeMap<>(Map.of(
+                "Mary", 30,
+                "John", 35,
+                "Ralph", 23,
+                "George", 15,
+                "Kate", 50));
+
+        Iterator iterator = treeMap.entrySet().iterator();
+
+        System.out.println(treeMap);
+
+        //treeMap.remove("Ralph"); // this will throw java.util.ConcurrentModificationException in while loop
+        iterator.next();
+        iterator.remove(); // its okay to remove items using iterator.... but if u notice we move cursor to first element iterator.next() then we delete it...
+
+        while (iterator.hasNext()) {
+            System.out.println(iterator.next());
+        }
+
+    }
+}
+
+4- Arrays.asList(T... a):
+   return fixed list size. (it will throw unsupported exception if u try to add/remove bcoz array is fixed size).
+
+5- Tricky question:
+import java.util.Map;
+import java.util.TreeMap;
+
+public class Test {
+    public static void main(String[] args) {
+        Map<String, Integer> treemap = new TreeMap<>();
+
+        // Ralph a new employee
+        int employeeNo = 1;
+        treemap.compute("Ralph",
+                (s1, s2) -> (s2 == null) ? employeeNo : s2 + 1);  // Line 1
+
+        int s2 = 3;  // Line 2
+
+        // Anne a  new employee
+        treemap.compute("Anne",
+                (s1, s3) -> (s1 == null) ? employeeNo + 1 : s2 + 1);  // Line 3
+
+        System.out.println(treemap);
+
+    }
+}
+
+output is:
+{Anne=4, Ralph=1}
+Ralph’s value is evaluated to 1 (s2 is the value which is null because Ralph entry did not exist),
+so the value is set to employeeNo (1). In addition, Anne is added to the map, s1 has the value ‘Anne’ so is not null,
+therefore the value for the ‘Anne’ key is set to employeeNo +1. If the code had used a increment operator (++) on employeeNo,
+this would have been a compile time error. In addition, a TreeMap is ordered using natural Order, which is alphabetical for Strings.
+
+-------------------------------------------------------
+######### Comparator and Comparable
+
+1- u can only use TreeSet with classes that implements Comparable interface,
+   otherwise it will show classcast exception...
+
+2- assume we have array of strings:
+   // Create an array of different names to test the compare method
+   String[] names = {
+                "Ralph Smith",
+                "Martha G. Jones",
+                "Anne Margaret Caroline Green",
+                "Owen White",
+                "Irene Funk",
+                "Philip",
+                "Joe Ford"};
+
+   - we can sort it bu using:
+   1- // Uses natural order... Strings implement Comparable
+      Arrays.sort(names); // it will sort the original names array..
+
+   2- convert to list and sort it using list.sort:
+      List<String> namesList = new ArrayList<>(List.of(names));
+
+      // Use static method reverseOrder on Comparator to sort
+      namesList.sort(Comparator.naturalOrder()); // or can use Comparator.reverseOrder()
+
+   3- or u can use custom Comparator with list or Arrays.sort:
+      // Create instance of custom Comparator
+      LastNameComparator l = new LastNameComparator();   // LastNameComparator implements Comparator...
+
+      namesList.sort(l);
+      Arrays.sort(names, l); // can use it with Array too
+
+   4- can use nullFirst or nullLast with comparator:
+      namesList.sort(Comparator.nullsFirst(l.reversed())); // it will print reversed order with null at first...
+      namesList.sort(Comparator.nullsLast(l.reversed())); // // it will print reversed order with null at last...
+
+   5- u can use multi-dimensional way to sort, for example sort by LastName then by FirstName:
+      // Note: that Person not necessary implements Comparable or Comparator
+      List<Person> people = new ArrayList<>(List.of(new Person("George", "Ball"),
+                      new Person("Cathy", "Hart"),
+                      new Person("Anne", "Ball"),
+                      new Person("Marty", "Hart")));
+
+     people.sort(
+                Comparator.comparing(Person::getLastName)
+                           .thenComparing(
+                                       Comparator.comparing(Person::getFirstName)));
+
+NOTE: (Comparable VS Comparator)
+1- Any class implementing the interface becomes sortable in collections that are sorted
+   True for Comparable
+   False for Comparator
+
+2- Method names:
+   Comparable compareTo
+   Comparator compare
+
+3- Comparable is in java.lang
+   Comparator is in java.util
+
+4- Comparable does not have default methods.
+   Comparator has default methods.
+
+5- Comparator generally used to order objects in an additional way than natural ordering.
+
+--------------------------------------------------------------------------------------------
+######## some other collections methods
+1- when u use Collections.copy, the destination size must be bigger than the source.
+   Collections.copy(des, src); // notice that des comes first at param1 , then only src....
+
+--------------------------------------------------------------------------------------------
+######## tricky questions:
+
+1- double d = 32.0f; // OKAY
+   Double wrapper= 32.0f; // compiler error
+
+2-
+  List<?> integerList1 = new ArrayList<Integer>();
+  integerList1.add((int) 7); // compiler error bcoz ? could be Exception
+
+3-
+   List<? super Integer> integerList2 = new ArrayList<Integer>();
+   integerList2.add(5); // OKAY
+   integerList2.add((int) 10L);
+
+   /******************* TRICKY ****************/
+   List<? extends Integer> integerList3 = new ArrayList<Integer>(); // integerList3 could reference to Short, thats why we cant add 1 bcoz it will be auto boxed to integer..
+   integerList3.add(Integer.valueOf(1)); // compiler error...
+
+4-
+List<Number> list = new ArrayList<Integer>();  // Line 1 , Compiler error, THEY BOTH MUST BE THE SAME TYPE
+// either both are Number or both are integer,,,,
+
+5-
+        List<Long> list = new ArrayList<Long>();
+        list.add(10); // compiler error, it must be 10L
+
+6- Tricky question:
+
+import java.util.*;
+
+class Item implements Comparator<Item> {
+    private int id;
+
+    Item(int id) {
+        this.id = id;
+    }
+
+    int compareTo(Item i) {
+        return i.id - this.id;
+    }
+
+    public int compare(Item o1, Item o2) {
+        return o1.id - o2.id;
+    }
+
+    public String toString() {
+        return "" + id;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        List<Item> testData = List.of(
+                new Item(20),
+                new Item(10),
+                new Item(15)
+        );
+        List<Item> itemList = new ArrayList<>(testData);  // Line 1
+        //Collections.sort(itemList);     // Line 2 , it will show compiler error bcoz item class must implement Comparable...
+
+        Set<Item> treeSet = new TreeSet(new Item(0));   // Line 3 OKAY bcoz Item implement Comparator, if not then it will also show a compiler error...
+        treeSet.addAll(testData);
+        Item i1 = treeSet.iterator().next();      // Line 4
+
+        System.out.println(i1);
+    }
+}
+

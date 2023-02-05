@@ -1,0 +1,152 @@
+- Connect to and perform database SQL operations, process query results using JDBC API.
+
+Examples:
+
+java provides two classes to get a connection to the data source:
+
+1- java.sql.DriverManager:
+   - db url.
+      has this form : jdbc:vendorDatabase:otherStuff
+   - db driver.
+
+2- javax.sql.DataSource
+
+before java 4.0 we used to use this command to load class in application:
+
+Class.forName("class.name");
+
+DriverManager constructors:
+1- Connection getConnection(String url, Properties info) throws SQLException.
+1- Connection getConnection(String url, String user, String password) throws SQLException.
+1- Connection getConnection(String url) throws SQLException.
+
+    // Create a table in the current database schema
+    public static void createTable(Connection connection)
+            throws SQLException {
+
+        String createSQL =
+                "create table " +
+                        "PERSON " +
+                        "(PERSON_ID INTEGER NOT NULL, " +
+                        "NAME varchar(255) NOT NULL," +
+                        "AGE INTEGER NOT NULL, " +
+                        "PRIMARY KEY (PERSON_ID))";
+
+        try (Statement stmt = connection.createStatement()) {
+
+            stmt.execute(createSQL);
+        }
+
+    }
+
+------------------------------------
+
+executeQuery() method used to retrieve some data from database. executeUpdate() method used for update or modify database. execute() use for any SQL statements. It returns an integer value.
+
+boolean execute
+int executeUpdate
+ResultSet executeQuery
+
+we have another option from using execute queries is to use PreparedStatement
+which is a SQL statement can be precompiled for optimization
+and PreparedStatement helps avoid SQL injection.
+
+public static void addData(Connection connection)
+            throws SQLException {
+
+        String[] names = {"Joe", "Carol", "April", "June", "Mark", "Don"};
+        Random r = new Random();
+
+        String insertSQL =
+                "insert into PERSON (PERSON_ID, NAME, AGE) " +
+                        "Values(?, ?, ?)";
+
+        try (PreparedStatement stmt =
+                     connection.prepareStatement(insertSQL)) {
+
+            for (int i = 0; i < names.length; i++) {
+                stmt.setInt(1, 101 + i);
+                stmt.setObject(2, names[i]);
+                stmt.setInt(3, r.nextInt(70));
+                if (stmt.executeUpdate() == 1) {
+                    System.out.println(names[i] + " was inserted");
+                }
+            }
+        }
+
+    }
+
+
+-------------------------------------------
+
+connection.createStatement(ResultSet.TYPE_SCROLL_INSESTIVE, CONCUR_UPDATABLE)
+CONCURE_UPDATABLE allow u to update records while iterating results using resultsSet...
+SCROLL_INSETIVE allos u to move resultSet forward and backword,
+FORWARD_ONLY allow u to move cursor only in one way..
+
+-----------------------------------------------
+
+CallableStatement is used when u want to execute stored procedures on external database..
+
+----------------------------------------------
+
+JDBC Driver Types:
+1- Type 1:
+   JDBC-ODBC bridge (open database connectivity).
+3- Type 2:
+   Implemented partly in java and partly in native code.
+4- Type 3:
+   Pure java client communicate with middleware server (Middleware driver).
+4- Type 4 (Preferred):
+    Implemented entirely in java (Pure java Driver).
+
+------------------------------------------
+
+u should always try-with-resource when open a connection:
+
+try (Connection connection = getConnection()) {
+
+}
+
+-------------------------------------------
+There are 3 type of statements we can use:
+
+1-
+stmt = connection.createStatement();
+stmt.execute("select * from person" ) /// used to execute static sql statements.
+
+2- Prepared statment: its a precompiled sql statements
+stmt = connection.prepareStatement("update person set name=? where id=?");
+stmt.setString(1,name);
+stmt.setInt(2,id);
+int rowsUpdated = stmt.executeUpdate();
+
+3- Callable Statement : used to execute stored processudr:
+stmt = connection.prepareCall("{call update_person(?,?)}");
+stmt.setString(1,name);
+stmt.setInt(2,personId);
+stmt.execute();
+
+---------------------------------------------
+
+String url = ConnectionExamples.derbyFileConnectionString;
+String query = "SELECT * FROM PERSON where PERSON_ID = ?";
+
+try (Connection connection = DriverManager.getConnection(url);
+     PreparedStatement statement = connection.prepareStatement(query)
+) {
+    statement.setInt(0, 101);  // Line 1
+    if (statement.execute()) {  // Line 2
+        ResultSet resultSet = statement.getResultSet();  // Line 3
+        while (resultSet.next()) {
+            System.out.println(resultSet.getString(2)); // Line 4
+        }
+    }
+}
+
+// line 1 will throw an exception:
+
+This line throws a SQLException: The parameter position ‘0' is out of range. Both a PreparedStatement and a ResultSet Object’s attributes are indexed starting with 1, not 0.
+
+--------------------------------------------
+

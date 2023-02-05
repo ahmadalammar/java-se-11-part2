@@ -1,0 +1,445 @@
+- Read and write console and file data using I/O Streams.
+- Implement serialization and deserialization techniques on Java objects.
+- Handle file system objects using java.nio.file API.
+
+Examples:
+- we have something called Console that is similar as System.out, but with more format option to output..
+Console also have a method to securely read the password :
+console.readPassword()
+
+- There are different Types of streams:
+1- Byte Stream.
+2- Character Stream.
+3- ObjectStream.
+4- DataStream: it support primitive input and strings.
+and all Streams above implement DataInput interface or DataOutput interface.
+
+
+
+- There are many way to read file contain:
+1- using BufferReader:
+BufferReader buffer = new BufferReader(new FileReader(fileName));
+buffer.readLine();
+
+2- using DataOutputStream (Note: this will write data as binary):
+// this is to write the data to file as binary .....
+DataOutputStream output = new DataOutputStream(new FileOutputStream(fileName));
+output.writeInt(255);
+
+// this is to read the data from binary file..
+
+DataInputStream inputStream = new DataInputStream(
+           new BufferedInputStream(new FileInputStream(fileName));
+);
+
+try{
+inputStream.readInt();--> we should wrap it with EOFException bcoz once it finish reading the file then it will throw EOFException..
+} catch(EOFException ex) {
+  ex.printStack();
+}
+
+
+3- writing Objects to file:
+ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(fileName));
+outputStream.writeObject(obj); // note that obj class MUST implement Serializable interface....
+
+// reading object from the file:
+ObjectInputStream outputStream = new ObjectInputStream(new FileInputStream(fileName));
+(Pet)outputStream.readObject(obj); // note that obj class MUST implement Serializable interface...., and we must cast as well ....
+
+Note:
+if the file containg does not match EXACTLY the attributes class then it will show runtime exception:
+InvalidClassException.... refer to 143 video, time: 2:35 ....
+
+We can solve the exception above by declaring the attribute that are NOT in the object file as : transient
+so adding:
+transient String breed="UNKNOWN";
+to the class will fix the exception..
+so eventho your file object does not have breed attribute it will just print the default value for it which is "UNKNOWN"...
+
+Note:
+When you have two classes and the superClass does not implement Serializable, its attributes are not serialized
+BUT the constructor of super class is called for deserialization....
+means when we read the object (deserialization), we will notice that the superClass constructor is being called....
+
+Note also related to above note:
+the superClass  MUST has no-args constructor with public or protected access modifier...
+if superClass does not have no-args constructor with public or protected access modifier then it will
+show a runtime exception during deserialization.....
+
+There is other way to fix the error is by implementing Serilizable at superClass too,
+so we dont have to add a default constructor in superClass...
+
+
+below is the example:
+
+Final Note:
+if the parent did not implement Serilizable then the attribute will not be serialized, hence the value will still 0,
+and it will call no-args constructor,
+but if the parent class implemented Serlizable then the attribute will be serialized, and it WONT call default no-args
+constructor.
+
+
+import java.io.*;
+
+class Animal /*implements Serializable*/ {
+    int age;
+    int weight;
+
+    // if u comment the default constructor then it will show java.io.InvalidClassException
+    // u should add default constroctor OR make superclass implementing Serializable...
+    Animal() {
+        System.out.println("Inside a no-args Animal constructor");
+    }
+
+    Animal(int age) {
+        System.out.println("Inside single args Animal constructor");
+    }
+}
+
+// Class must implement Serializable if it does not extend
+// a class that implements Serializable...
+class Pet extends Animal implements Serializable {
+    private String name;
+    private String type;
+    private transient String breed = "Unknown";
+
+    // No arguments constructor
+    Pet() {
+        super(0);
+        System.out.println("Inside no args Pet constructor");
+    }
+
+    // Constructor takes name and type of Pet
+    Pet(String name, String type) {
+        super(0);
+        this.name = name;
+        this.type = type;
+        System.out.println("Inside Pet(name,type) constructor");
+    }
+
+    // Use IntelliJ generated toString() method
+    public String toString() {
+        return "Pet{" +
+                "name='" + name + '\'' +
+                ", type='" + type + '\'' +
+                ", breed='" + breed + '\'' +
+                ", age='" + age + '\'' +
+                ", weight='" + weight + '\'' +
+                '}';
+    }
+
+}
+
+public class SerializationExample {
+    public static void main(String[] args) throws IOException,
+            ClassNotFoundException {
+
+        String fileName = "Brandy.ser";
+
+        Pet originalPet = new Pet("Brandy", "Dog");
+        originalPet.age = 5;
+        originalPet.weight = 30;
+
+        System.out.println("--------- Original State -----------");
+        System.out.println(originalPet);
+
+        // Use try with resources (automatically closes file) to output
+        // the Pet object
+        try (ObjectOutputStream outputStream = new ObjectOutputStream(
+                new FileOutputStream(fileName))) {
+            // write the Pet to a file
+            outputStream.writeObject(originalPet);
+        }
+
+        Pet deserializedPet = null;
+        // Use try with resources (automatically closes file) to input
+        // the Pet object
+        try (ObjectInputStream inStream = new ObjectInputStream(
+                new FileInputStream(fileName))) {
+            try {
+                // read the Pet from a file
+                deserializedPet = (Pet) inStream.readObject();
+
+                // Need to check for EOFException
+            } catch (EOFException e) {
+                // Ignore, end of file
+            }
+        }
+
+        System.out.println("------- Deserialized State ------");
+        System.out.println(deserializedPet);
+
+    }
+}
+
+// all the above read method can be written in try-with-resources...
+
+Serelizable interface has default method writeObject and readObject,
+we can override and customize it as well...
+
+Important Note:
+static field are not serialized...it will always take the value from the class
+and NOT from the file that we deserialize...
+
+Externilzable is an interface that has two methods to give the control on serilizing and deserilizing,,,
+it has two methods:
+writeExternal and readExternal....
+
+When we implement Externalizer on object then the class has to have public no-args constructor....
+if no  no-args constructor then it will thro runtime error....
+
+----------------------------------------------
+
+Path.of(fileName);
+
+we will get NPE if fileName is null
+Path.Of(null) <----- throw NPE
+
+
+The normalize() method of java. nio. file. Path used to return a path from current path in which all redundant name elements are eliminated.
+
+-------------------------------------------
+Path.relativize(Path other) it will give us the direction to other path...
+
+-----------------------------------------
+https://www.geeksforgeeks.org/path-resolve-method-in-java-with-examples/
+
+-----------------------------------------
+Just read and execute IO.PathMethods..
+
+-----------------------------------------
+Files class has alot of static method to create/check file status...etc...
+
+Files.exist, File.isReadable...etc
+
+---------------------------------------
+read slide 626 + 627 + 628
+
+----------------------------------------
+CREATE_NEW will throw an exception if file already exists
+CREATE it will just open the file and will not delete existing data..
+
+            try {
+                // Exception occurs if file already exists
+                Files.write(byteFile, "Secret sauce".getBytes(),
+                        StandardOpenOption.CREATE_NEW);
+            } catch (IOException e) {
+                System.out.println(e);
+                Files.write(byteFile, "Secret sauce".getBytes(),
+                        StandardOpenOption.CREATE);
+
+            }
+
+            System.out.println("Creating " + byteFile2);
+            // Write a String to file, but do not append it
+            Files.writeString(byteFile2, "Secret Ingredient OneTwoThree\n",
+                    StandardOpenOption.WRITE);
+
+            // Write a String to file, appending it
+            Files.writeString(byteFile2, "Secret Ingredient One\n",
+                    StandardOpenOption.APPEND);
+
+            System.out.println("Appending to " + byteFile2);
+            Files.writeString(byteFile2, "Secret Ingredient Two\n",
+                    StandardOpenOption.APPEND);
+
+
+-------------------------------------------------
+Files.delete(fileName) --> will throw an exception nosuchefile if file not exisits....
+Files.deleteIfExists will not throw an exception
+Files.createFile will throw an exception if directory not exists ,, lets say /test1/test2/file.txt and test2 dir not found then it will throw an exception...
+                 it will also throw an exception if file already exists unless the option is REPLACE_EXISTING..
+
+File.createDirectory it will thro an exception if one of the directory path not exists..
+Files.createDirectoris will create directories for entire path...
+
+
+------------------------------------------------------
+Stream<Path> all throws checked exception IOException
+
+
+Files.list only shows files from the first directory level.
+Files.walk go deep in directory files (multi level).
+you can use Files.walk(Path, Max_depth) to spesfiy the deepth levels..
+
+ // Need to wrap in try/resources or try/catch so that directory
+        // is appropriately closed.
+        try (Stream<Path> str = Files.list(src)) {
+            str
+                    .limit(5)  // Can use any stream operation
+                    .forEach(System.out::println);
+        } catch (IOException io) {
+            System.out.println("Problem with listing " + io);
+        }
+
+
+
+         // For any directories, call current method recursively
+         try (Stream<Path> str = Files.walk(p, 1)) {
+             str
+                     // Do not want to list current path
+                     .filter(s -> !s.equals(p))
+                     // Find all directories at current level
+                     .filter((s) -> Files.isDirectory(s))
+                     // Recursively call current method
+                     .forEach((s) -> FilesAndStreams.implementBreadthWalk(s));
+         } catch (IOException io) {
+             System.out.println("Problem with listing " + io);
+         }
+
+--------------------------------------------
+
+Files.Find will search in a Directory:
+
+        int maxDepth = 5;
+        try (Stream<Path> str = Files.find(src, maxDepth,
+                (f, a) -> {
+                    return
+                            f.getFileName().
+                                    toString().startsWith("F")
+                                    &&
+                                    a.isRegularFile();
+                })
+        ) {
+            str
+                    .limit(8)
+                    .forEach(System.out::println);
+        } catch (IOException io) {
+            System.out.println("Problem with find " + io);
+        }
+
+--------------------------------------------
+
+usual readLines in Files.readLines read all lines in once and cause out of memory exception
+if file too large, but u can use stream.readAllLines which will read lazily the data...
+
+Note on exams:
+Stream<String> str = Files.lines(p) <--- this return a stream, hence u can use filters and map...etc..., and it will
+also populate results lazily...
+
+Files.readAllLines <----- return list of lines...
+
+-------------------------------------------
+
+Scanner Constructor can be with String, File, path, inputStream...
+
+        // Using a Scanner, using constructor with a Path.
+        try (Scanner scanner = new Scanner(path)) {
+            while (scanner.hasNext()) {
+                line = scanner.nextLine();
+                System.out.println(line);
+
+                // Using a scanner, constructed with a simple String.
+                try (Scanner lineScanner = new Scanner(line)
+                        // You can specify a different delimiter
+                        .useDelimiter(",")) {
+                    while (lineScanner.hasNext()) {
+                        word = lineScanner.next();
+                        System.out.println("\t" + word);
+                    }
+                }
+            }
+        }
+
+----------------------------------
+
+Tricky questions on exam:
+
+1- Scanner("file.txt") <---- this is not reading a file, it read it as string
+
+2- All methods in Files is static public and throws IOException.....
+
+by default copy method will fail if target already exists...
+if source and dest are same files then it will complete the operation without copying the file.
+if source and taarget path are directory the operation creates an empty directory in the target location.
+copy method will return a path if the target file.
+
+Files.copy has 3 overloaded methods: // copy important in exam!!!!
+1- Path  p = Files.copy(Path source, Path dest, CopyOption... options);
+2- long l = Files.copy(Path source, OutputStream out); // copies all bytes to output stream...
+   l returned here is the number of bytes read or witten from this method...
+
+3- long l = Files.copy(InputStream in, Path target, CopyOption... options).
+   copy will fail if target already exists..
+   it will return l as number of bytes that has been written...
+
+
+Note about copyOption arg in copy method..
+1- it only applies if target is a path and its optional.
+
+
+-------------------------------
+
+notice the output:
+
+public class Test {
+    public static void main(String[] args) throws IOException {
+        Path p = Path.of("c:/", "test", "root", "f.txt");
+
+        Path p1 = p.getParent().relativize(p);  // Line 1
+        Path p2 = p.getName(0);        // Line 2
+        Path p3 = p.subpath(2, 3);     // Line 3
+
+        System.out.println(p1 + " " + p2 + " " + p3);
+    }
+}
+
+code compiles and executed without error, output: f.txt test f.txt
+
+The relativize method could be rewritten as Path.of("/test/root").relativize(Path.of("/test/root/f.txt"))
+* It is important to note that getName(0) is not c:/ (the root). getName(0) returns the element closest to the root, test.
+* p.subpath(0, 1) = test, p.subpath(1,2) = root; p.subpath(2,3) = f.txt
+
+-------------------------------
+
+read and execute:
+
+class AttributeClass {
+    String attribute;
+
+    AttributeClass(String attribute) {
+        this.attribute = attribute;
+    }
+
+    public AttributeClass() {
+        this("unknown");
+    }
+
+    public String toString() {
+        return attribute;
+    }
+}
+
+class ContainerClass implements Serializable {
+    String name;
+    transient AttributeClass feature = new AttributeClass("tall");
+
+    ContainerClass(String name, String attribute) {
+        this.name = name;
+        this.feature = new AttributeClass(attribute);
+    }
+
+}
+
+public class Test {
+    public static void main(String[] args) throws Exception {
+        File file = new File("ralph.ser");
+        ContainerClass ralph = new ContainerClass("Ralph", "short");
+        try (ObjectOutputStream outputStream =
+                     new ObjectOutputStream(new FileOutputStream(file))) {
+            outputStream.writeObject(ralph);
+
+        }
+
+        try (ObjectInputStream inputStream =
+                     new ObjectInputStream(new FileInputStream(file))) {
+            ralph = (ContainerClass) inputStream.readObject();
+        }
+
+        System.out.println(ralph.name + " is " + ralph.feature);
+    }
+}
+
+-------------------------------
+

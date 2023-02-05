@@ -1,0 +1,113 @@
+- Implement Localization using Locale, resource bundles, and Java APIs to parse and format messages, dates, and numbers.
+
+Locale is a set of params that defines the user lang, region and preferences.
+- lang.
+- country.
+- variant.
+- script.
+
+refer to locale.LocaleReview.
+
+------------------------------------------------------
+
+Locale constructors:
+public Locale(String language);
+public Locale(String language, String country);
+public Locale(String language, String country, String variant);
+note: there is no no-args constroctur
+
+or u can use Locale.Builder()
+or Locale.forLanguageTag
+
+note:
+there is no set values in locale construcotrs
+
+l.setRegion("CA") // compiler error
+l.setLanguage("en"); // compiler error
+
+the only way to set region and language is thro constroctur.
+
+Locale("en", null) ; // it will compies but it will thro NPE
+
+refer to locale.LocaleObjects
+
+------------------------------------------------
+
+ResourceBundle
+
+we can retrieve an object using getString, getObject.
+if the object not found the getter method throws MissingResourceException.
+
+There are two subclasses of the abstract ResourceBundle class:
+1- ListResourceBundle: its abstract class the manages resources as list of key/value pairs,
+   when we extend this class we can implement method Object[][] getContents().
+
+2- PropertyResourceBundle
+
+refer to locale.LocaleResource
+--------------------------
+
+Locale.GERMAN would produce the following list of candidate to load:
+firstBundle_de_DE
+or
+firstBundle_de
+
+for Locale.AMERICA
+firstBundle_en_US_slang
+or
+firstBundle_en_US
+or
+firstBundle_en
+
+<name> <language> <country> <variant>
+
+note: ResourceBundle.getBundle method search files from most specific ti least specific.
+
+every bundle file must specify language tag, means the following file bundle is not going to match any locale:
+firstBundle_US.properties -> must specifiy language (firstBundle_en_US.properties).
+
+
+---------------------------
+
+resource bundle can be .properties or ListResourceBundle class.
+
+import java.util.ListResourceBundle;
+
+public class firstBundle_en_CA extends ListResourceBundle {
+
+    protected Object[][] getContents() {
+        return new Object[][]{
+                {"yes", "Yea"},
+                {"no", "Nah"},
+                {"unsure", "Not sure"}
+        };
+    }
+}
+
+
+--------------------------------
+
+in exam it may test on getter methods of a ResourceBundle:
+1- getString
+2- getStringArray
+3- getObject
+
+------------------------------
+
+Formatting messages Date and Numbers
+
+refer to locale.LocaleFormattingNumbers and locale.LocaleFormattingText
+
+---------------------------------
+
+refer to locale.LocaleFormattingDateTime
+
+-------------------------------
+
+all java.time classes are immutable and thread-safe
+
+------------------------------
+
+refer to locale.Test1 and SpecialResource_fr
+
+----------------------------

@@ -1,0 +1,559 @@
+############################# parallel Streams #########################
+
+1- in parallel stream, u cant alter underlying collection while
+   pipeline still processing.
+
+2- by default when u create a parallel stream, the number of threads
+   in the pipeline processing will equal the number of available CPUs for your system.
+
+3- there are two ways to create parallel streams:
+   - Stream.parallel()
+   - parallelStream()
+
+4- forEachOrdered operation forces the elements on the stream to be processed in the order specified by the source.
+   BUT any performance gains you might have achieved by operating in parallel could be lost
+   bcoz of the ordering process.
+
+   HOWEVER any operation prior forEachOrder could benefit from parallel stream performance.
+
+NOTE:
+u cant add elements to list while stream it, this is for stream and parallel stream:
+
+example:
+
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        List<Integer> list = new ArrayList<>();
+
+        list.add(1);
+        list.add(2);
+        list.add(3);
+
+        list.stream().map(
+                element -> {
+                    list.add(12);
+                    return element;
+                }
+        ).collect(Collectors.toList());
+
+    }
+}
+
+this will show java.util.ConcurrentModificationException
+
+example below:
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+        // Create a list of integers, multiples of 1 to 20
+        List<Integer> integerList = Stream.iterate(
+                        1, (t) -> t <= 20, (t) -> t + 1)
+                .collect(Collectors.toList());
+
+        System.out.println("-----  Serial stream results -----");
+        // Create stream from integerList
+        for (int i = 0; i < 5; i++) {
+            integerList.stream()
+                    .forEach((s) -> System.out.print(s + " "));
+            System.out.println();
+        }
+
+        System.out.println("----- Apply parallel operator to stream -----");
+        // Turn a stream to a parallel stream by using parallel intermediate
+        // operation on the stream.
+        for (int i = 0; i < 5; i++) {
+            integerList.stream()
+                    .parallel()
+                    .forEach((s) -> System.out.print(s + " "));
+            System.out.println();
+        }
+
+        System.out.println("----- Getting a parallel stream from List -----");
+        // Create parallel stream from integerList using parallelStream() method
+        for (int i = 0; i < 5; i++) {
+            integerList.parallelStream()
+                    .forEachOrdered((s) -> System.out.print(s + " ")); // note: that u cant modify integerList during the stream pipeline....
+            System.out.println();
+
+        }
+
+        System.out.println("----- Using stateful lambda expression -----");
+        //  Create parallel stream from integerList using parallelStream() method
+        List<Integer> synchList = Collections.synchronizedList(new ArrayList<>()); // try to change from synchronizedList to normal ArrayList, u will get unpredictable results...
+
+        // note that using synchronizedList it will show consistent result (20 records) but the order is unpredictable....
+        for (int i = 0; i < 5; i++) {
+            synchList.clear();
+            integerList
+                    .parallelStream()
+                    // stateful lambda expression
+                    .forEach((s) -> {
+                        synchList.add(0, s); // here we are changing the state of synchList from inside the parallel stream....
+                    });
+            System.out.println(synchList);
+
+        }
+    }
+}
+
+--------------------------------------------------------
+################# Reduction parallel stream
+
+import java.util.stream.Stream;
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        // The sum() terminal operation available to an IntStream
+        // Serial Stream<Integer> gets mapped to IntStream first.
+        long sum = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+                .mapToInt(s -> s)
+                .sum();
+        System.out.println("serial sum using sum() = " + sum);
+
+        // The average() terminal operation available to an IntStream
+        // Serial Stream<Integer> gets mapped to IntStream first.
+        double avg = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+                .mapToInt(s -> s)
+                .average().getAsDouble();
+        System.out.println("serial average using average() = " + avg);
+
+        // Use the reduce() terminal operation on a serial stream
+        sum = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+                .reduce(0, Integer::sum);
+        System.out.println("serial sum using method reference" +
+                "(Integer::sum) as accumulator = " + sum);
+
+        // Use the reduce() terminal operation on a parallel stream
+        sum = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+                .parallel()
+                // single args reduce method, accumulator
+                .reduce(Integer::sum).get();
+        System.out.println("parallel sum using method reference" +
+                "(Integer::sum) as accumulator = " + sum);
+
+        // The average() terminal operation available to an IntStream
+        // Stream<Integer> to parallel Stream gets mapped to IntStream .
+        avg = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+                .parallel()
+                .mapToInt(s -> s)
+                .average().getAsDouble();
+        System.out.println("parallel average using average() = " + avg);
+
+        // Use the reduce terminal operation on a parallel stream
+        sum = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+                .parallel()
+                // two args reduce method, identifier, accumulator
+                .reduce(0, (s1, s2) -> s1 + s2);
+        System.out.println("parallel sum using lambda expression " +
+                "((s1, s2) -> s1 + s2) as accumulator = " + sum);
+
+        /*************** TRICKY ****************/
+        /****
+         * public abstract <U> U reduce(     U identity,
+         *     java.util.function.BiFunction<U, ? super T, U> accumulator,
+         *     java.util.function.BinaryOperator<U> combiner )
+         *
+         * the combiner is only used in parallel stream, means if we are using parallel stream
+         * and we try to get reduction then it will use combiner formula,
+         * and since in the below example its (s1, s2) -> s1 ( it does not accumulate s2, it just return s1, by right should be (s1, s2) -> s1)
+         * it will show wrong result,
+         * but if we commented out parallel, then it will not even use combiner, it will use accumulatar, and it will show correct result....
+         *
+         *
+         *
+         * ****/
+        // Use the reduce terminal operation on a parallel stream
+        sum = Stream.iterate(0, i -> i <= 10000, i -> i + 1)
+//                .parallel()
+                // three args reduce method
+                .reduce(0, (s1, s2) -> s1 + s2, (s1, s2) -> s1);
+        System.out.println("parallel sum using lambda expression " +
+                "((s1, s2) -> s1 + s2) as accumulator\n\t" +
+                "and ((s1,s2) -> s1) as combiner= " + sum);
+
+    }
+}
+
+--------------------------------------------------
+####### reduce method with strings:
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
+
+public class Test {
+    public static void main(String[] args) {
+
+        ArrayList<String> a;
+        String[] names = {"Anne", "Bob", "Carol", "David",
+                "Evan", "Fred", "George", "Harold", "Ida", "Jack", "Kevin"};
+
+        // If executing on a single thread, the identity, in this case the
+        // comma, does not get used between elements
+        String result = Arrays.stream(names)
+                .peek(System.out::print)
+                .reduce(",", (s1, s2) -> s1 + s2);
+
+        System.out.println(":\n\t serial String concat = " + result);
+
+        // If executing on multiple threads, the identity, in this case the
+        // comma, MAY be used between elements.  Parallel suggests to
+        // the processor to use multiple threads but it is not guaranteed...
+        result = Arrays.stream(names)
+                .parallel().peek(System.out::print)
+                .reduce(",", (s1, s2) -> s1 + s2);
+
+        System.out.println(":\n\t parallel String concat = " + result);
+
+        // If the source is not ordered, the result will not be
+        // ordered
+        result = Set.of(names).stream()
+                .parallel()
+                .peek(System.out::print)
+                .reduce("", (s1, s2) -> s1 + s2, (s1, s2) -> s1 + "_" + s2);
+
+        System.out.println("::\n\t parallel String concat = " + result);
+
+    }
+}
+
+
+-----------------------------------------------
+############ parallel collection
+
+Note:
+1- u can collect data on a parallel stream using a collect method,
+   but for predictable results its is best to use a concurrent reduction,
+   whose requirements are that the collector has the characteristics CONCURRENT and UNORDERED...
+
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+// Persons will be used to test collect() method with toMap and groupingBy
+class Person {
+    private static int id_counter;
+    private static String[] names = {"Anne", "Bob", "Carol", "David",
+            "Evan", "Fred", "George", "Harold", "Ida", "Jack", "Kevin"};
+
+    private String name;
+    private int id;
+    private int age;
+
+    // Constructor
+    Person() {
+        Random random = new Random();
+        this.name = names[new Random().nextInt(11)];
+        this.id = ++id_counter;
+        this.age = random.nextInt(99);
+    }
+
+    // Getters, will be used in mappings
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public int getId() {
+        return id;
+    }
+}
+
+// Class that tests concurrent reductions
+public class Test {
+    public static void main(String[] args) {
+
+        // Create a Collector using Collectors.toMap
+        Collector c1 = Collectors.toMap(String::length, s -> s);
+        System.out.println("Characteristics of Collectors.toMap() are "
+                + c1.characteristics());
+
+        // Create a Collector using Collectors.toConcurrentMap
+        Collector c2 = Collectors.toConcurrentMap(String::length, s -> s);
+        System.out.println("Characteristics of Collectors." +
+                "toConcurrentMap() are " + c2.characteristics());
+
+        // Create a Collector using Collectors.groupingBy
+        Collector c3 = Collectors.groupingBy(Person::getAge);
+        System.out.println("Characteristics of Collectors." +
+                "groupingBy(Person::getAge) are " + c3.characteristics());
+
+        // Create a Collector using Collectors.groupingByConcurrent
+        Collector c4 = Collectors.groupingByConcurrent(
+                String::toString, Collectors.toList());
+        System.out.println("Characteristics of Collectors." +
+                "groupingByConcurrent() are " + c4.characteristics());
+
+        // Create a List of randomly generated Persons.
+        Set<Person> personList = Stream.generate(Person::new)
+                .limit(2_000_000)
+                .collect(Collectors.toSet());
+
+//        testToMap(personList);
+
+        testGroupingBy(personList);
+
+    }
+
+    // Method tests toMap and toConcurrentMap and prints out time
+    // elapsed
+    static void testToMap(Set<Person> personList) {
+        long start = System.currentTimeMillis();
+
+        // Serial Stream, uses toMap to collect data into a map
+        Map<Integer, Person> personMap =
+                personList
+                        .stream()
+                        .collect(Collectors.toMap(
+                                Person::getId, p -> p));
+
+        System.out.println("serial: toMap: " +
+                (System.currentTimeMillis() - start) + " ms");
+
+        //-----------------------------------------------------
+        start = System.currentTimeMillis();
+        // Parallel Stream uses toMap to collect data into a map
+        Map<Integer, Person> personMap1 =
+                personList
+                        .parallelStream()
+                        .collect(Collectors.toMap(
+                                Person::getId, p -> p));
+
+        System.out.println("parallel: toMap: " +
+                (System.currentTimeMillis() - start) + " ms");
+
+        //-----------------------------------------------------
+        start = System.currentTimeMillis();
+        // Parallel Stream uses toConcurrentMap to collect data into map
+        Map<Integer, Person> personMap2 =
+                personList
+                        .parallelStream()
+                        .collect(Collectors.toConcurrentMap(
+                                Person::getId, p -> p));
+
+        System.out.println("parallel: toConcurrentMap: " +
+                (System.currentTimeMillis() - start) + " ms");
+
+    }
+
+    // Method tests groupingBy and groupingByConcurrent and e
+    // prints out time elapsed
+    static void testGroupingBy(Set<Person> personList) {
+        long start = System.currentTimeMillis();
+
+        // Serial Stream, uses groupingBy to collect data into a map
+        Map<Integer, List<Person>> m =
+                personList
+                        .stream()
+                        .collect(Collectors.groupingBy(Person::getAge));
+
+        System.out.println("stream: groupingBy: " +
+                (System.currentTimeMillis() - start) + " ms");
+        //-----------------------------------------------------
+        start = System.currentTimeMillis();
+        // Parallel Stream, uses groupingBy to collect data into a map
+        Map<Integer, List<Person>> m1 =
+                personList
+                        .parallelStream()
+                        .collect(Collectors.groupingBy(Person::getAge));
+
+        System.out.println("parallel: groupingBy: " +
+                (System.currentTimeMillis() - start) + " ms");
+        //-----------------------------------------------------
+        start = System.currentTimeMillis();
+        // Parallel Stream, uses groupingByConcurrent to collect data
+        // into a map
+        Map<Integer, List<Person>> m2 =
+                personList.parallelStream()
+                        .collect(Collectors.
+                                groupingByConcurrent(Person::getAge));
+
+        System.out.println("parallel: groupingByConcurrent: " +
+                (System.currentTimeMillis() - start) + " ms");
+
+    }
+}
+
+-------------------------------
+####### out of ordinary #1
+
+1- reduce method in stream create a new value when it process the element.
+2- collect method modifies or mutates an existing value.
+
+Note:
+if source collection is ordered, then the parallel stream will be ordered,
+https://stackoverflow.com/questions/29709140/why-parallel-stream-get-collected-sequentially-in-java-8
+
+
+example below:
+
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+
+public class Test {
+    public static void main(String[] args) {
+
+        Set<String> set = new TreeSet<>(Set.of("b", "c", "d"));
+        //List<String> set = List.of("c","b","d");
+        /***************** without parallel stream **********************/
+        String firstResult1 = set
+                .stream()
+                .reduce(String::concat)
+                .get();
+        String secondResults1 = set
+                .stream()
+                .collect(Collectors.joining());
+
+        System.out.println("firstResult1=" + firstResult1);
+        System.out.println("secondResults1=" + secondResults1);
+        System.out.println("___________________________");
+
+        /**************************************************************/
+
+
+        /***************** with parallel stream **********************/
+        String firstResult2 = set
+                .parallelStream()
+                .reduce(String::concat)
+                .get();
+        String secondResults2 = set
+                .parallelStream()
+                .collect(Collectors.joining());
+
+        System.out.println("firstResult2=" + firstResult2);
+        System.out.println("secondResults2=" + secondResults2);
+        System.out.println("___________________________");
+
+        /****************************************************************/
+
+
+        /***************** using reduction with identity **********************/
+        String firstResult3 = set
+                .stream()
+                //.reduce("",String::concat);
+                .reduce("", String::concat, String::concat);
+
+
+        String secondResults3 = set
+                .stream()
+                // collect required Supplier, BiConsumer, BiConsumer
+                .collect(String::new, String::concat, String::concat);
+
+        System.out.println("firstResult3=" + firstResult3);
+        System.out.println("secondResults3=" + secondResults3);
+        System.out.println("___________________________");
+        /****************************************************************/
+
+        /***************** using StringBuilder **********************/
+
+
+        // Using reduce with StringBuilder
+        StringBuilder firstResult = set
+                .stream() // try to change to parallel Stream
+                .map(s -> new StringBuilder(s))
+                // Requires Identity(StringBuilder), BiFunction, BinaryOperator
+                .reduce(new StringBuilder(),
+                        (a, b) -> a.append(b),
+                        (a, b) -> a.append(b));
+
+        System.out.println("firstResult = " + firstResult);
+
+        // Using collect with StringBuilder
+        StringBuilder secondResult = set
+                .stream() // try to change to parallel Stream
+                .map(s -> new StringBuilder(s))
+                // collect requires Supplier, BiConsumer, BiConsumer
+                .collect(StringBuilder::new,
+                        (a, b) -> a.append(b),
+                        (a, b) -> a.append(b));
+        System.out.println("secondResult = " + secondResult);
+
+        /****************************************************************/
+    }
+}
+
+--------------------------------------------------
+
+public class Test {
+    public static void main(String[] args) {
+        List<Integer> result = List.of(1, 2)
+                .parallelStream()  // Position 1
+                .collect(ArrayList::new,
+                        (x, y) -> x.add(y),  // Position 2
+                        (x, y) -> x.addAll(y)  // Position 3
+                );
+        System.out.println(result);
+    }
+}
+
+Which two of the following changes (when applied singly) allows the code to compile and print [1 2]
+
+A. Change code at Position 1 to
+
+.stream()  // Position 1
+
+B. Change code at Position 1 to
+
+.stream().parallel()  // Position 1
+
+C. Change code at Position 2 to :
+
+(x, y) -> y.add(x),  // Position 2
+
+D. Change code at Position 2 to
+
+(x, y) -> x.set(y-1, y),  // Position 2
+
+E. Change code at Position 3 to
+
+(x, y) -> x.addAll(y)  // Position 3
+
+F. Change code at Position 3 to
+
+(x, y) -> x.add(y)  // Position 3
+
+
+------------------------------------------
+
+public class Test {
+    public static void main(String[] args) {
+        String firstResult = Stream.of("a", "b")
+                .parallel()
+                .collect(String::new,
+                        String::concat,
+                        String::concat);
+
+        String secondResult = Stream.of("a", "b")
+                .parallel()
+                .reduce(new String(),
+                        String::concat,
+                        String::concat);
+
+        System.out.println(firstResult.equals(secondResult));
+    }
+}
+
+What is the result of compiling and executing this code?
+it will print false:
+
+Correct answer:
+The result of the first operation (collect) will always be an empty String because a String does not mutate,
+and the result of the second operation (reduce) will always be “ab”, so the code will always output false.

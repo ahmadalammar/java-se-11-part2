@@ -1,0 +1,49 @@
+- Develop code that mitigates security threats such as denial of service, code injection, input validation and ensure data integrity.
+- Secure resource access including filesystems, manage policies and execute privileged code.
+
+
+java.util.Date is mutable API class
+java.time.* immutable.
+
+
+One of the guidelines for protecting objects from mutating unexpectedly is that you should support copy functionality for a class you design.
+
+
+
+Which of the following is a recommended practice for providing copy functionality for a mutable class
+
+A.  Provide an accessible static creation method.
+
+B.  Override the clone method and implement it.
+
+C.  Provide an accessible copy constructor.
+
+D.  Implement a public copy method for final classes.
+
+E.  Callers should plan on performing a manual copy.
+
+
+A,C,D are correct.
+
+--------------------------------------
+
+Which statements are NOT true about serialization and deserialization?
+
+* A.   Serialization provides an interface to classes that sidesteps the field access control mechanisms of the Java language.
+
+* B.   Making a class serializable effectively creates a public interface to all fields of that class.
+
+* C.   Serialization effectively adds a hidden public constructor to a class, which needs to be considered when trying to restrict object construction.
+
+* D.   Deserialization should be designed to behave like normal construction.
+
+* E.   Deserialization creates a new instance of a class without invoking any constructor on that class
+
+* F.   An attacker can serialize an object to bypass a security check and access the internal state simply by reading the serialized byte stream.
+
+all statements are true......
+
+
+---------------------------------------------
+
+

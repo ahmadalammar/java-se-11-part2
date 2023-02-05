@@ -1,0 +1,199 @@
+- Create, apply, and process annotations.
+
+Examples:
+
+
+Types of annotation:
+1- marker @MyElementsAnnotation
+   no element values
+   specifies element/value mappings but all have default value.
+
+2- Single Element @MySecondAnnotation("This")
+   specifies only a single element value named value.
+
+3- Normal @MyFirstAnnotation(name="THAT", value="MORE")
+   specifies zero to many element values.
+
+-----------------------------
+
+create custom annotation
+public @interface MyInterface {
+}
+
+refer to anntation.TestingAnnotatedClasses
+
+-----------------------------
+
+we can set where the custom annotation should be used by adding @Target
+example:
+
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+public @interface MySourceAnnotation {
+}
+
+
+import java.lang.annotation.*;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Documented // it will also generate java doc
+public @interface MyRuntimeAnnotation {
+    String author();
+    double version();
+    String description();
+}
+
+
+---------------------------
+
+Annotation annotated with @Inherited will ONLY get inherited from some superclass (
+and not through an interface) and only when declared at the class level (not for methods, fields, parameters,etc..)
+
+-------------------------
+
+@Repeatable , to make annotation repeatable we need to create two annotations, one is repeatable annotation using @Repeatble
+and the other is a container for an array of the repeatable annotation.
+
+refer to annotations.TestingAnnotatedClasses2
+
+------------------------------
+
+commonly used jdk annotation:
+
+1- @Override:
+   target method, retention source.
+
+2- @SafeVarags:
+    target constructor, method
+    retention: runtime
+    compiler suppresses unchecked warnings relating to varags usage.
+
+3- @SuppressWarnings:
+    elements String[] value
+    target:
+    field, local_variables,method, constroctors, module..
+    retention source
+
+@FunctionalInterface should be used on top on interface ONLY, not abstract or class....
+
+------------------------------
+
+@Deprecated(
+  since="1.3",
+  forRemoval=true
+)
+
+-----------------------------
+
+@SuppressWarnings
+will remove warnings from compiler
+
+so lets say we have method called:
+
+@Deprecated(forRemoval=true, since="1.3")
+public void doThis() {}
+
+@Deprecated(since="1.3")
+public void doThisAlso() {}
+
+and we have another method
+@SuppressWarnings("removal")
+public status void main() {
+Test.doThis(); // we will notice that compiler will remove the warnings for this method.
+// and it does not have cross line on it anymore....
+
+Test.doThisAlso(); //this one has crossLine on it bcoz it does not have removal tag set to true...
+// u can also removal crossLine from this also by making:
+@SuppressWarnings({"deprecation","removal})
+// then it will remove the crossLine for these two methods....
+
+
+}
+
+
+// example below:
+// Create a class with a method marked as deprecated
+public class HasDeprecatedMethod {
+    /**
+     * Using javadoc tag @deprecated
+     *
+     * @deprecated As of release 1.2, replaced by {@link #doThat()}
+     */
+    // Using annotation @Deprecated
+    @Deprecated(
+            since = "1.3",
+            forRemoval = true
+    )
+    public void doThis() {
+        System.out.println("Doing this");
+    }
+
+    public void doThat() {
+        System.out.println("Doing that");
+    }
+
+    /**
+     * Using javadoc tag @deprecated
+     *
+     * @deprecated As of release 1.5
+     */
+    @Deprecated(
+            since = "1.5")
+    public void doThisAlso() {
+        System.out.println("Doing this also");
+    }
+}
+
+class JavaLangAnnotations {
+
+    @SuppressWarnings({"deprecation","removal"})
+    public static void main(String[] args) {
+        HasDeprecatedMethod hasDeprecatedMethod = new HasDeprecatedMethod();
+        // Deprecated method usage...
+        hasDeprecatedMethod.doThis();
+        hasDeprecatedMethod.doThisAlso();
+    }
+}
+
+------------------------------------
+
+SafeVarags:
+refer to annotation.safeVrgsExample
+
+you can use @SafeVarags annotation when u can safely assert that the implementation
+of the method will not throw a classcastexception
+
+refer to annotation.JavaExample
+-----------------------------------
+
+if we did not specify the @target on annotation then it can apply for all types
+except type parameter annootation and type use annotation
+example:
+
+refer to annotation.annotations.AnnotateEverythingExample.java
+
+----------------------------
+
+Question 1:
+Which is not a valid ElementType for an Annotation Type Target?  ElementType is an enum which provides a type that indicates which syntactic locations are valid for where an annotation may appear in a Java program.
+
+* A.  CLASS
+
+* B.  CONSTRUCTOR
+
+* C.  FIELD
+
+* D.  LOCAL_VARIABLE
+
+* E.  MODULE
+
+* F.  PACKAGE
+
+* G.  PARAMETER
+
+* H.  TYPE_USE
+
+answer: CLASS in not valid
+
+-----------------------------------

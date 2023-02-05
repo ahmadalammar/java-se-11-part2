@@ -1,0 +1,356 @@
+1- in interface u cant declare a default method with protected or private, its public by default...
+   - u cant use synchronized or final keywords with default method declaration.
+   - one limitation on default methods is that u cannot declare a default method that would
+     override any of java.lang.Objects public methods, only clone is allowed to override...
+
+    default Object clone() throws CloneNotSupportedException {
+        System.out.println("Default method CAN override clone()");
+        return null;
+    }
+
+-------------------------------------------------------------
+
+2-
+ /************************* SUPER TRICKY *******************/
+when u have interface has a default methodA(),
+and class (or abstract class) has also same method signature methodA(),
+and u have class A that implement both interface and extend the above class, will it cause classA clash
+bcoz u have two method same signature ?
+
+the answer is NO, JVM will call the method that in super class and not in interface default method.
+
+example below:
+
+
+public interface Defaultable {
+
+    String abstractValue = "ABSTRACT";
+
+    void abstractMethod();
+
+    // default method..
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default");
+    }
+
+}
+
+// Class implements Defaultable interface
+class ImplementingClass implements Defaultable {
+    public void abstractMethod() {
+        System.out.println("ImplementingClass" +
+                " implements interface's abstract method");
+    }
+}
+
+// Class which uses the interface in a method as a parameter type.
+class DefaultClass extends BaseClass implements Defaultable {
+
+    public static void main(String[] args) {
+        // Instantiate the current class.
+        DefaultClass dc = new DefaultClass();
+
+        // Pass instance of implementing class to method using interface
+        dc.callAbstractMethod(new ImplementingClass());
+
+        // Pass lambda expression to method using interface
+        dc.callAbstractMethod(() -> System.out.println("Lambda Expression" +
+                " implements interface's abstract method"));
+
+        // Call method directly..
+        dc.abstractMethod();
+
+    }
+
+    // Method has a parameter of type Defaultable
+    public void callAbstractMethod(Defaultable d) {
+        // Execute implementing object's abstractMethod
+        d.abstractMethod();
+    }
+
+    public void abstractMethod() {
+        // Which method is this from (interface or BaseClass?)
+        defaultNotAbstractMethod();
+    }
+}
+
+// Create a base class that has method with same signature default
+// method in interface
+class BaseClass {
+
+    // notice that its same default method in interface....
+    public void defaultNotAbstractMethod() {
+        System.out.println("Testing defaultNotAbstractMethod on class");
+    }
+}
+
+--------------------------------------------------------
+3-
+
+if u have interface A that has default method methodA(),
+and has interface AMoreSpecific that extends interface A and override default method methodA();
+now we have a class that implements both interfaces interface A and interface AMoreSpecific
+and when we try to call method from within the class so which one it will call? interface A default method or interface AMoreSpecific ?
+
+the answer is interface AMoreSpecific bcoz JVM will look for more specific method to call...
+
+example below:
+
+public interface Test {
+
+    String abstractValue = "ABSTRACT";
+
+    void abstractMethod();
+
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default");
+    }
+
+}
+
+interface TestMoreSpesefic extends Test {
+    default void defaultNotAbstractMethod() {
+        System.out.println("TestMoreSpesefic Default");
+    }
+}
+
+
+// Class which uses the interface in a method as a parameter type.
+class DefaultClass implements Test, TestMoreSpesefic {
+
+    public static void main(String[] args) {
+        DefaultClass d = new DefaultClass();
+        d.defaultNotAbstractMethod(); // it will default method from TestMoreSpesefic
+    }
+
+    @Override
+    public void abstractMethod() {
+
+    }
+}
+
+---------------------------------------------
+4-
+
+example:
+2 interfaces and 1 class BaseClass
+
+and class A extend BaseClass and implements 2 interfaces...
+
+public interface Test {
+
+    String abstractValue = "ABSTRACT";
+
+    void abstractMethod();
+
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default");
+    }
+
+}
+
+interface TestMoreSpesefic extends Test {
+    default void defaultNotAbstractMethod() {
+        System.out.println("TestMoreSpesefic Default");
+    }
+}
+
+class BaseClass {
+    public void defaultNotAbstractMethod() { // try to remove public here and see what will happen.....DefaultClass will have a clash
+        System.out.println("TestMoreSpesefic Default");
+    }
+}
+
+// Class which uses the interface in a method as a parameter type.
+class DefaultClass extends BaseClass implements Test, TestMoreSpesefic {
+
+    public static void main(String[] args) {
+        DefaultClass d = new DefaultClass();
+        d.defaultNotAbstractMethod(); // note: this will call defaultNotAbstractMethod from BaseClass (more specific)
+    }
+
+    @Override
+    public void abstractMethod() {
+
+    }
+}
+
+---------------------------------------------------
+
+5-
+
+lets say we have 2 interfaces interface A
+and interface AMoreSpesefic,
+and in interface A has default method methodA() {}
+and in interface AMoreSpesefic we extend interface A it has override methodA() and it make it abstract (without body)
+
+now any class implement AMoreSpesefic MUST implement methodA()....
+
+example below:
+
+public interface Test {
+
+    String abstractValue = "ABSTRACT";
+
+    void abstractMethod();
+
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default");
+    }
+
+}
+
+interface TestMoreSpesefic extends Test {
+    void defaultNotAbstractMethod(); // overriding default method from parent and enforcing all classes that implements TestMoreSpesefic
+    // to implement defaultNotAbstractMethod()
+}
+
+// Class which uses the interface in a method as a parameter type.
+class DefaultClass implements Test, TestMoreSpesefic {
+
+    public static void main(String[] args) {
+        DefaultClass d = new DefaultClass();
+        d.defaultNotAbstractMethod();
+    }
+
+    @Override
+    public void abstractMethod() {
+
+    }
+
+    @Override
+    public void defaultNotAbstractMethod() {
+        //Test.super.defaultNotAbstractMethod(); // compiler error, notice we have TestMoreSpesefic extends Test interface, if u try
+        // to remove the extend from TestMoreSpesefic then it works fine... (just make it interface TestMoreSpesefic {} without extending Test) /************** TRICKY *************/
+
+        // if u really want to call defaultNotAbstractMethod from Test then u do the below code:
+        new Test(){
+            @Override
+            public void abstractMethod() {
+
+            }
+        }.defaultNotAbstractMethod();
+    }
+}
+
+--------------------------------------------------
+6-
+lets say we have 2 interface both unrelated interface A, and interface B
+but both of them has same method signature methodA().
+so now when a class C want to implements these 2 interfaces together he cannot know which one fits more
+so in class C we MUST override the methodA()....
+
+example below:
+
+// Interface walkable has an abstract method and a default method
+interface Walkable {
+    void walk();
+
+    default float getGait() {
+        return 3.5f;
+    }
+}
+
+// Interface Strollable has an abstract method and a default method
+interface Strollable {
+    void stroll();
+
+    default float getGait() {
+        return 2.5f;
+    }
+}
+
+// ConfusedClass implements both interfaces that both have the same
+// default method defined
+public class Test implements Walkable, Strollable {
+    public static void main(String[] args) {
+        Test c = new Test();
+        c.walk();
+        c.stroll();
+    }
+
+    public void walk() {
+        System.out.println("When walking, gait is " +
+                Walkable.super.getGait()); // notice here we can use super keyword to call default class bcoz Walkable and Strollable are not related....
+    }
+
+    public void stroll() {
+        System.out.println("When strolling, gait is " +
+                Strollable.super.getGait());
+    }
+
+
+    // notice here we overrided default method from both interfaces bcoz they r unrelated,,,,
+    public float getGait() {
+        // Overrides both methods and implements it's own custom code
+        return 5.2f;
+    }
+}
+
+----------------------------------------------
+
+7- Tricky:
+
+public interface Test {
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default");
+    }
+}
+
+interface TestMoreSpesefic extends Test {
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default from TestMoreSpesefic");
+    }
+}
+
+// Class which uses the interface in a method as a parameter type.
+class DefaultClass implements Test, TestMoreSpesefic {
+
+    public static void main(String[] args) {
+        DefaultClass d = new DefaultClass();
+        d.defaultNotAbstractMethod();
+    }
+
+    @Override
+    public void defaultNotAbstractMethod() {
+        Test.super.defaultNotAbstractMethod(); // compiler error, notice we have TestMoreSpesefic extends Test interface, if u try
+        // to remove the extend from TestMoreSpesefic then it works fine... (just make it interface TestMoreSpesefic {} without extending Test) /************** TRICKY *************/
+        TestMoreSpesefic.super.defaultNotAbstractMethod(); // THIS ONE OKAY AND NO ERRORS
+
+    }
+}
+
+--------------------------------------------
+
+8- access modifier in interface in public static by default,
+
+public interface Test {
+    default void defaultNotAbstractMethod() {
+        System.out.println("Testing Default");
+    }
+
+    public static void publicStaticMethod() {
+
+    }
+
+    private static void privateStaticMethod() {
+
+    }
+
+    private void privateMethod(){
+
+    }
+
+    // inner class in interface, its public static by default..
+    public static class  NestedClass { // access modifier by default is public static...
+
+    }
+}
+
+-----------------------------------------
+
+9- static method on an interface not inherited by implementing class,
+   and can only be accessed using interface type qualifier.
+
+interfaceInstance.staticMethod(); // compiler error, need to access by interface class
+InterfaceClass.staticMethod(); // OKAY...

@@ -1,0 +1,223 @@
+3- tricky
+Note:
+for(int i = 0; i < 5; i++) { str += "*"; } // this will print length 6
+
+13- tricky
+
+18- tricky
+
+Note:
+str.contentEquals available in String only NOT in StringBuilder....
+both string and stringBuilder implement consequence
+
+Note:
+toString() method defined in StringBuilder class doesn’t use String literal rather uses the constructor of String class to create the instance of String class.
+
+public class Test {
+    public static void main(String[] args) {
+        StringBuilder sb = new StringBuilder("Dream BIG"); // if u change it to String then the result will be true...
+        String s1 = sb.toString();
+        String s2 = sb.toString();
+
+        System.out.println(s1 == s2);
+    }
+}
+
+30 - tricky
+
+Note:
+if (50 <= score < 60) // compiler error, cant compare like this, it must be if ((50 <= score) && (score < 60))
+
+-----------------------------------------------
+
+Dump - 2
+
+2- tricky
+5- tricky
+11- tricky
+
+Note:
+public class Test {
+    public static void main(String[] args) {
+        int[] arr = {2, 1, 0};
+        for (int i : arr) {
+            System.out.println(arr[i]);
+        }
+    }
+}
+// it will print 0 1 2 , NOT 2 1 0
+
+43- tricky
+
+45- tricky
+
+47 - tricky
+Regular inner class Bar cannot define any static methods. Method m1() is static and hence Line n2 causes compilation error.
+
+51- tricky
+Regular inner class cannot define anything static, except static final variables. In this case, static initializer block inside inner class Bar is not allowed.
+
+
+---------------------
+Dump - 3
+
+5+6 - tricky
+
+Note about inner class:
+Unlike other inner classes, an anonymous inner class can either extend from one class or can implement one interface.
+It cannot extend and implement at the same time and it cannot implement multiple interfaces.
+
+16- tricky
+class A {
+    static class B {
+
+    }
+}
+
+public class Test {
+    A.B obj = new A().new B(); // compiler error, NOTE: if B was not static then this statement is correct...
+    A.B obj = new A.B(); // correct answer....
+}
+
+37- tricky
+
+54 - tricky
+
+---------------------
+
+Dump 4
+
+Note:
+static variables will always be initilize even tho u did not call it explicitly
+
+// it will thro NPE bcoz obj is null...
+
+public class Test {
+    static Character obj;
+    static char c = obj.charValue();
+
+    public static void main(String[] args) {
+
+        System.out.println("DREAMS COME TRUE");
+    }
+}
+
+2- tricky
+
+8- tricky
+Base b = null;
+Derived d = (Derived) b; //Line n3 (this will not throw runtime exception bcoz b is null)
+
+13- tricky
+14- tricky
+((Lock)super).open(); => Not possible to cast super keyword in java, it causes compilation error.
+it is not possible to directly reach to 2 levels
+
+21- tricky
+
+23 - tricky
+
+39 - tricky
+A constructor should have super(…) or this(…) but NOT both.
+
+-----------------------------------------
+
+Dump 5
+
+1- tricky
+
+17 - tricky
+remember that static method in interface must only be accessed via interface class name
+
+20- tricky
+
+23 - tricky
+
+24 - tricky
+below code compiles successfully,
+interface Perishable1 {
+    default int maxDays() {
+        return 1;
+    }
+}
+
+interface Perishable2 extends Perishable1 { // if u comment out "extends Perishable1" then its a compiler error in Milk class...
+    default int maxDays() {
+        return 2;
+    }
+}
+
+class Milk implements Perishable2, Perishable1 {
+
+}
+
+
+27 - tricky
+
+34- tricky
+// below code will cause compiler error, as equals is declared in Object class
+@FunctionalInterface // if u remove the annotation then it will works
+interface Tester {
+    boolean equals(Object obj);
+}
+
+38 - tricky
+enum constructor will be invoked twice, once for each constant
+
+41 - tricky,
+enum constants cant be declared twice
+
+43 - super tricky
+switch case label accept ONLY unqualified names of enum constants.
+means cant use case TrafficLight.RED, it should be case RED
+
+45- tricky
+Enum constant list must be the first item in an enum.
+
+46 - tricky
+cant use operator == to compare two enum constants from different types...
+public class Test {
+    enum JobStatus {
+        SUCCESS, FAIL; //Line n1
+    }
+
+    enum TestResult {
+        PASS, FAIL; //Line n2
+    }
+
+    public static void main(String[] args) {
+        JobStatus js = JobStatus.FAIL;
+        JobStatus js2 = JobStatus.SUCCESS;
+        TestResult tr = TestResult.FAIL;
+
+        boolean status = JobStatus.FAIL == JobStatus.SUCCESS; // OKAY , no compiler error
+        boolean status2 = JobStatus.FAIL == TestResult.FAIL; //  compiler error, two diffrenet type
+        boolean status3 = js == tr; // compiler error, two different type
+
+        System.out.println(js.equals(tr)); //OKAY, no compiler error
+        System.out.println(JobStatus.FAIL == JobStatus.FAIL); //OKAY, no compiler error
+
+        System.out.println(js == js2); // okay , no compiler error
+        System.out.println(js == tr); // compiler error, notice that
+    }
+}
+
+47 - tricky
+Every enum extends from java.lang.Enum class and it contains following definition of clone method:
+
+protected final Object clone() throws CloneNotSupportedException {
+throw new CloneNotSupportedException();
+}
+and notice its protected and cant be access from outside the package scope...
+
+49 - tricky
+Error class extend from Throwable,
+
+53 - Tricky
+
+-----------------------------------------
+
+Dump 6
+
+6 - tricky
+catch(Exception | RuntimeException ex) // compiler error Causes compilation error as RuntimeException extends Exception.

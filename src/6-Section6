@@ -1,0 +1,401 @@
+############################# Functional interface and lambda expression #########################
+functional interface contain only one abstract method
+functional interface ofter suffixed with 'able'
+
+interface Doable {
+  void doSomething();
+}
+
+// Note: ExtendedDoable is also functional interface even thor it does not have any abstract function, but it extend it from parent class.....
+interface ExtendedDoable extends Doable {
+   // void doOtherThing(); // if u uncomment this method, then ExtendedDoable will have 2 abstract method and it wont fullfill function interface requirements
+   // hence we cant use lambda expression with it, NOTE: lambda expression can only be used with functional interfaces
+}
+
+
+Notes:
+in exam remember the following:
+1- u can override an abstract method on an interface with a default method.
+2- u cannot override an abstract method on interface with a static method.
+3- u cannot override an abstract method with a private method.
+
+example below:
+
+// package-private functional interface with Single-Abstract-Method
+interface Doable {
+    void doIt();
+}
+
+// Extending interfaces
+interface ExtendedDoable extends Doable/*, Comparable*/ { // if u extend Comparable as well, then u will have 2 abstract methods, and its not functional interface anymore...
+    default void doIt() {
+        System.out.println("Default method implementing doIt()");
+    }
+
+    void extendedDoIt();
+}
+
+public class Test {
+
+    // private nested functional interface
+    private interface Shapeable {
+        void shapeIt();
+    }
+
+    public static void main(String[] args) {
+
+        // Anonymous class implements Doable interface
+        Doable d = new Doable() {
+            public void doIt() {
+                System.out.println("Anonymous class invoking doIt()");
+            }
+        };
+
+        // Lambda Expression assigned to a ExtendedDoable local variable
+        ExtendedDoable d2 = () ->
+                System.out.println("Lambda Expression invoking doIt()");
+
+        // Anonymous class implements Shapeable interface
+        Shapeable s = new Shapeable() {
+            public void shapeIt() {
+                System.out.println("Anonymous class invoking shapeIt()");
+            }
+        };
+
+        // Lambda Expression assigned to a Shapeable local variable
+        Shapeable s2 = () ->
+                System.out.println("Lambda Expression invoking shapeIt()");
+
+        System.out.print("main executes anonymous class d.doIt(): ");
+        d.doIt();
+        System.out.print("main executes anonymous class s.shapeIt(): ");
+        s.shapeIt();
+
+    }
+
+}
+
+
+lambda expression example:
+
+/**********
+ * Notes:
+ *
+ * There are 4 kinds of method references in Java:
+ *
+ * ContainingClass::staticMethodName - reference to a static method
+ * containingObject::instanceMethodName - reference to an instance method of a particular object
+ * ContainingType::methodName - reference to an instance method of an arbitrary object of a particular type
+ * ClassName::new - reference to a constructor
+ *
+ *
+ * *************/
+
+interface Calculable {
+    float calculate(float operand1, float operand2);
+}
+
+interface Showable {
+    void showIt();
+}
+
+public class Test {
+
+    private static void executeFirstMethod() {
+        System.out.println("First Method executing");
+    }
+
+    private static Float executeSecondMethod() {
+        System.out.println("Second Method executing");
+        return 1f;
+    }
+
+    private void executeThirdMethod() {
+        System.out.println("Third Method executing");
+    }
+
+    public void testThirdMethod() {
+
+        Test t = new Test();
+        Showable s5 = t::executeFirstMethod; // compiler error
+        Showable s6 = t::executeThirdMethod;
+
+        s5.showIt();
+    }
+
+    public static void main(String[] args) {
+
+        // Void method, any statement will work
+        Showable s1 = () -> System.out.println("Doing something");
+
+        // Expanded body, enclosed in {}
+        Showable s2 = () -> {
+            String s = "Doing something";
+            System.out.println(s);
+            return;  // This return is ok because method is void
+        };
+
+        // You can call a method as long as return type matches
+        // abstract method.
+        Showable s3 = () -> executeFirstMethod();
+
+        // You can execute a method with return type even with
+        // an abstract method that is declared void
+        Showable s4 = () -> executeSecondMethod();
+
+        // You can execute use a method reference in place of
+        // lambda expression
+        Showable s5 = Test::executeThirdMethod;
+        s5.showIt();
+
+
+        /************** below is invalid lambda declaration ****************/
+
+        // All the stuff you can not do.....
+        // Cannot autobox/unbox with parameters in a lambda expression
+//        Calculable d1 = (Float op1, Float op2) -> op1 + op2;
+//
+//        // Cannot mix LVTI var with declared types
+//        Calculable d2 = (var op1, float op2) -> op1 + op2;
+//
+//        // Have to either declare types for all parameters or none
+//        Calculable d3 = (float op1, op2) -> op1 + op2;
+//
+//        // single expresson must evaluate to the return type of method,
+//        // this returns void.
+//        Calculable d4 = (var op1, var op2) -> System.out.println(op1 + op2);
+
+        // No return type specified
+//        Calculable d5 = (var op1, var op2) -> {
+//            float f1 = op1;
+//            float f2 = op2;
+//            // return type is required
+//        };
+//
+//        // Wrong amount of parameters
+//        Calculable d6 = (var op1) -> 0;
+//
+//        // Wrong amount of parameters
+//        Calculable d7 = () -> 0;
+//
+//        // Cannot use return statement in single expression, not in brackets {}
+//        Calculable d8 = (op1, op2) -> return op1 / op2;
+//
+//        // Cannot pass constants in the parameter list
+//        Calculable d9 = (1, op2) ->1 / op2;
+//
+//        // Cannot omit parameter section altogether, () required if method
+//        // has no parameters
+//        Showable b1 = ->System.out.println("Do this");
+//
+//        // This expression 'returns a String' but method is void
+//        Showable b2 = () ->  "hello";
+    }
+
+}
+
+------------------------------------------
+
+example about method reference:
+
+import static java.lang.System.out;
+
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
+
+
+/**********
+ * There are 4 kinds of method references in Java:
+ *
+ * ContainingClass::staticMethodName - reference to a static method
+ * containingObject::instanceMethodName - reference to an instance method of a particular object
+ * ContainingType::methodName - reference to an instance method of an arbitrary object of a particular type
+ * ClassName::new - reference to a constructor
+ *
+ * **************/
+class ReferenceSource {
+
+    private String value;
+
+    public ReferenceSource() {
+    }
+
+    public ReferenceSource(String value) {
+        this.value = value;
+    }
+
+    public String doInstanceMethodOfParticularObject(final String value) {
+        return ReferenceSource.toUpperCase(value);
+    }
+
+    public static String doStaticMethod(final String value) {
+        return ReferenceSource.toUpperCase(value);
+    }
+
+    public String doInstanceMethodOfArbitraryObjectOfParticularType() {
+        return ReferenceSource.toUpperCase(this.value);
+    }
+
+    private static String toUpperCase(final String value) {
+        return Optional.ofNullable(value).map(String::toUpperCase).orElse("");
+    }
+}
+
+public class Test {
+    public static void main(String... args) {
+        // #1 Ref. to a constructor
+        final Supplier<ReferenceSource> refConstructor = ReferenceSource::new;
+        final Function<String, ReferenceSource> refParameterizedConstructor = value -> new ReferenceSource(value);
+
+        final ReferenceSource methodReferenceInstance = refConstructor.get();
+
+        // #2 Ref. to an instance method of a particular object
+        final UnaryOperator<String> refInstanceMethodOfParticularObject = methodReferenceInstance::doInstanceMethodOfParticularObject;
+
+        // #3 Ref. to a static method
+        final UnaryOperator<String> refStaticMethod = ReferenceSource::doStaticMethod;
+
+        // #4 Ref. to an instance method of an arbitrary object of a particular type
+        final Function<ReferenceSource, String> refInstanceMethodOfArbitraryObjectOfParticularType = ReferenceSource::doInstanceMethodOfArbitraryObjectOfParticularType;
+
+        Arrays.stream(new String[] { "a", "b", "c" }).map(refInstanceMethodOfParticularObject).forEach(out::print);
+        Arrays.stream(new String[] { "d", "e", "f" }).map(refStaticMethod).forEach(out::print);
+        Arrays.stream(new String[] { "g", "h", "i" }).map(refParameterizedConstructor).map(refInstanceMethodOfArbitraryObjectOfParticularType)
+                .forEach(out::print);
+    }
+}
+
+-------------------------------------
+
+example:
+
+below code we have 3 abstract methods, toString(), equals() is override from Object, so it still fullfill Functional Interface...
+
+// Interface with 3 abstract methods
+interface Functionable {
+
+    int function(int i1, int i2);
+
+    String toString();
+
+    boolean equals(Object o);
+}
+
+public class Test {
+    public static void main(String[] args) {
+        // Lambda Expression using Functionable interface, which implies
+        // Functionable interface is a function interface.
+        Functionable f = (s, t) -> s + t;
+        System.out.println(f.function(5, 5));
+        System.out.println(f.toString());
+    }
+}
+
+
+--------------------------------------------
+
+another example:
+
+import java.util.*;
+
+interface Confuseable<String> extends Comparator<String> {
+
+    default int compare(String s1, String s2) {
+        System.out.println("In compare method");
+        Random r = new Random();
+        int i = r.nextInt();
+        if (i % 2 == 0) i = -i;
+        return i;
+    }
+
+    int dummy(String s1, String s2);
+
+    // cant override equals...
+//    default boolean equals(Object o) {
+//        return false;
+//    }
+}
+
+class Confused<T> implements Confuseable<String> {
+    private String name;
+
+    Confused(String name) {
+        this.name = name;
+    }
+
+    public String toString() {
+        return this.name;
+    }
+
+    public int dummy(String s1, String s2) {
+        return 0;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        Confuseable c = (s, t) -> {
+            System.out.println("Executing this method");
+            return -1;
+        };
+        List<Confused> list = new ArrayList<>();
+        list.add(new Confused<String>("Jane"));
+        list.add(new Confused<String>("Mark"));
+        list.add(new Confused<String>("Emily"));
+
+        Collections.sort(list, c);
+        System.out.println(list);
+    }
+}
+
+-----------------------------------------------
+
+tricky question
+On which line does the code fail to compile?
+output is : 93
+
+interface Changeable {
+    int giveChange(int chg);
+
+    default int giveChange(short chg) {  // Line 1
+        return (int) (100 - chg);
+    }
+
+    static int giveChange(long chg) {   // Line 2
+        return 99;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Changeable changeable = chg -> chg - 6;  // Line 3
+        int result = changeable.giveChange(Changeable.giveChange(100L)); // Line 4
+        System.out.println(result);
+    }
+}
+
+---------------------------------------------
+Which of the lambda expressions compiles?      /************ TRICKY **************/
+
+interface Functionable {
+
+    int performFunction(String s, int i1, Integer i2);
+
+    public String toString();
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Functionable lambdaA = (s, i, j) -> 1;  // Lambda A
+
+        Functionable lambdaB = (String s, int i, int j) -> 1;  // Lambda B
+
+        Functionable lambdaC = (var s, var i, Integer j) -> 1;  // Lambda C
+
+        Functionable lambdaD = (var s, var i, var j) -> 1;  // Lambda D
+    }
+}

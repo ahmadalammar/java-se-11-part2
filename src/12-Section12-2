@@ -1,0 +1,2165 @@
+############################# Concurrent #########################
+
+interrupt() will interrupt running thread....
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                System.out.println("Thread running");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        t.start();
+        System.out.println("app started");
+        Thread.sleep(2000); // wait 2 seconds before interrupt
+        t.interrupt();
+    }
+
+}
+
+---------------------------------
+
+if u run start more than one time then it will throw an exception...
+u can run() many times....
+run is blocking, means it will wait unit thread finish....
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                System.out.println("Thread running");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        t.run();
+        System.out.println("app started"); // it will show only after run() finish....
+        Thread.sleep(2000); // wait 2 seconds before interrupt
+        t.interrupt();
+    }
+}
+
+--------------------------------
+
+there are two ways to implement thread:
+1- extending from thread class, need to override run method..
+2- implementing Runnable...
+
+Thread class and runnable exists in java.lang package which is imported by default....
+------------------ Executors and concurrent ------------------
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        ExecutorService executorService1 = Executors.newSingleThreadExecutor();
+
+        executorService1.execute(() -> {
+            try {
+                System.out.println("Thread has started.....");
+                Thread.sleep(6000);
+                System.out.println("Thread has finished.....");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        System.out.println("Application started....");
+        Thread.sleep(2000);
+        executorService1.shutdown(); // shutdown will not accept any new requests, means u cant run submit or execute after shutdown....
+        // , when u shutdown it will NOT interrupt existing running thread.....
+        boolean status = executorService1.awaitTermination(2, TimeUnit.SECONDS); // its blocking and will wait 2 seconds...
+        // it will not interrupt the existing running thread, it will just give u a hint about the termination time to set....
+        if (status)
+            System.out.println("Thread has been shutdown successfully");
+        else
+            System.out.println("thread did not finish on expected termination time!");
+    }
+}
+
+--------------------------------------------
+// submit and execute....
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        ExecutorService executorService1 = Executors.newSingleThreadExecutor();
+
+        executorService1.execute(Test::doSomething); // this is valid
+        executorService1.submit(Test::doSomething); // this is valid
+        executorService1.execute(() -> {
+                    System.out.println("hello!");
+                    //return 1; compiler error, not valid bcoz execute accept only Runnable, while submit accept Runnable and Callable...
+                }
+        );
+        Future<String> results = executorService1.submit(() -> {
+                    System.out.println("hello!");
+                    return "Hello"; //this is valid bcoz its implementing Callable...
+                }
+        );
+        // Runnable does not return any value, while callable returns T value....
+        // both submit and execute non blocking, means u can run and it will move on...
+        // execute does not return any value and its void, while submit returns Future<T> which allow u
+        // to have a better control on the task and to monitor it...
+
+    }
+
+    public static int doSomething() {
+        System.out.println("hello am running in thread....");
+        return 1;
+    }
+}
+
+-------------------------------------------------------
+
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException {
+
+        ExecutorService executorService1 = Executors.newSingleThreadExecutor();
+
+        Future<String> results = executorService1.submit(() -> {
+                    System.out.println("Thread has started");
+                    Thread.sleep(5000);
+                    System.out.println("Thread has completed successfully");
+                    return "Hello"; //this is valid bcoz its implementing Callable...
+                }
+        );
+
+        System.out.println("App started");
+        System.out.println("Thread status is Done: " + results.isDone());
+        String str = results.get(2, TimeUnit.SECONDS); // it will wait for 2 seconds to get the result, if thread not
+        // finished in 2 seconds then it will throw an exception TimeoutException....
+        System.out.println("Done!!");
+    }
+}
+
+
+--------------------------------------------
+// inoke any and invoke all
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class TestValidate {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
+
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        List<Callable<String>> v1 = new ArrayList<>();
+        v1.add(() -> {
+            double time = Math.random() * (10 - 1 + 1) + 1;
+            System.out.println("Thread 1 started with time=" + (int) time * 1000);
+            Thread.sleep((int) time * 1000);
+            System.out.println("Thread 1 finished" + Thread.currentThread().getName());
+            return "hello";
+        });
+        v1.add(() -> {
+            double time = Math.random() * (10 - 1 + 1) + 1;
+            System.out.println("Thread 2 started with time=" + (int) time * 1000);
+            Thread.sleep((int) time * 1000);
+            System.out.println("Thread 2 finished" + Thread.currentThread().getName());
+            return "hello";
+        });
+        // inokeAll it will trigger all tasks and wait them until all finish,,but if u set the timeout then it will just
+        // wait 5 seconds then terminate the not completed tasks...
+        // note: that only in invokeAll and invokeAny u can set the timeout together when u invoke the tasks...
+        // in submit and execute there is no such thing, only in submit u can get Future<T> and can use
+        // get(Timout) method....
+        List<Future<String>> futures = executorService.invokeAll(v1, 5, TimeUnit.SECONDS);
+
+        // note: that after 5 seconds if not all tasks finished then it will terminate the work and move on...
+        // u can see those not finished in the below for loop...
+        for (Future<String> f : futures) {
+            System.out.println(f.isCancelled() + f.get()); // if u try to get() before thread finished then it will throw
+            // exception java.util.concurrent.CancellationException
+        }
+        // note we should always shutdown executrers...
+        executorService.shutdown();
+    }
+}
+
+
+-----------------------------------
+// invoke any
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class TestValidate {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException, TimeoutException {
+
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        List<Callable<String>> v1 = new ArrayList<>();
+        v1.add(() -> {
+            try {
+                double time = Math.random() * (10 - 1 + 1) + 1;
+                System.out.println("Thread 1 started with time=" + (int) time * 1000);
+                Thread.sleep((int) time * 1000);
+                System.out.println("Thread 1 finished" + Thread.currentThread().getName());
+                return "hello";
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "Exception";
+        });
+        v1.add(() -> {
+            try {
+                double time = Math.random() * (10 - 1 + 1) + 1;
+                System.out.println("Thread 2 started with time=" + (int) time * 1000);
+                Thread.sleep((int) time * 1000);
+                System.out.println("Thread 2 finished" + Thread.currentThread().getName());
+                return "hello";
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "Exception";
+        });
+        // invokeAny it will get the first returned result coming and it will just terminate the other threads...
+        String futures = executorService.invokeAny(v1, 6, TimeUnit.SECONDS); // Note: invokeAny return T , and it will throw TimeoutExcption if not get the result on expected time,
+                                                                             // while invokeAll will not throw TimeoutException, it will just return Future<T> and we can use get() and f.isCancelled()
+                                                                             // to see if thread finished or not....
+
+        System.out.println(futures);
+    }
+}
+
+
+------------------------------------
+
+The join method waits for the thread to complete
+
+------------------------------------
+
+notice in run method u cant throw checked exception
+bcoz parent method does not throwing a achecked exception.....
+
+class ThreadDoesSomething extends Thread {
+
+    public void run() {
+        // Unchecked Exception
+        // try to change this to checked exception....
+        // throw new Exception("Extended Thread chokes");
+        // notice that u cant thro checked exception
+        throw new RuntimeException("Extended Thread chokes");
+    }
+}
+
+----------------------------------------------
+
+Notes about throwing checked and unchecked exceptions....
+
+Thread  run method does not throw a checked exception, only unchecked exception....
+Runnable run method does not throw a checked exception, only unchecked exception....
+class ThreadDoesSomething extends Thread {
+
+    public void run() {
+        // Unchecked Exception
+        // try to change this to checked exception....
+        // throw new Exception("Extended Thread chokes");
+        // notice that u cant thro checked exception
+        throw new RuntimeException("Extended Thread chokes");
+    }
+}
+
+
+for callable we can throw a checked exception , look at Callable class
+declaration u will see that run method throw exception at method header...
+
+        // Callable variable assigned a lambda expression that
+        // throws unchecked exception
+        // note: here we can thro checked exception...
+        // if u try to throw Thrwoable exception then this will show exception...
+        // bcoz Throwable is less spesfic exception...
+        // look at Callable declation u will see its throws exception....
+        Callable c = () -> {
+            throw new Exception(
+                    "Callable chokes in service.submit()");
+        };
+        // submit method called returns a Future
+        Future f2 = service.submit(c);
+
+for supplier:
+
+    // Supplier
+        Supplier s = () -> {
+            throw new RuntimeException(
+                    "Suppplier::get chokes in service.submit()");
+        };
+        // supplier has same signature as callable, however u cant pass supplier variable reference
+        //Future f3 = service.submit(s); // compiler error
+        Future f3 = service.submit(s::get);
+
+----------------------------------------------
+
+another example about checked and unchecked exception in threads:
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Supplier;
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(Test::doSomthing); // compiler error bcoz cant handle checked exception....
+
+        Supplier<String> s = () -> {
+            System.out.println("hello world");
+            throw new Exception("hello"); // cant throw a checked exception in supplier as well....
+        };
+
+        executorService.execute(s);// compiler error...
+        executorService.execute(s::get); // its valid
+
+    }
+
+    public static void doSomthing() throws Exception {
+        throw new Exception("exception");
+    }
+}
+
+
+--------------------------------------------------
+
+only runnable can be used to constrcut the thread
+
+Thread t = new Thread(new Runnable(){
+void run(){
+}
+});
+
+-------------------------------------------
+as we know runnable does not return anything,  its just void,
+but as we know submit returns Future<T> so we can do the following:
+ Future<String> future1 = service.submit(task, "Goodbye");
+
+        // Create a Runnable task
+        Runnable task = () -> {
+            try {
+                System.out.println("Kicking off Runnable Hello");
+                Thread.sleep(1000);
+                System.out.println("Finishing Runnable Hello");
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Runnable Hello", e);
+            }
+        };
+
+        // Use submit to submit a Runnable, second argument is returned
+        // as result
+        Future<String> future1 = service.submit(task, "Goodbye");
+
+-----------------------------------------------
+
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Test {
+    public static void main(String[] args) {
+        ExecutorService service = Executors.newSingleThreadExecutor();
+
+        // submit method accpet callable and runnable, in the below code its using callable....
+        service.submit(() -> {
+            throw new Exception("Exception 1");     // Line 1
+        });
+        // execute method only accept Runnable....
+        service.execute(() -> {
+            throw new RuntimeException("Exception 2");  // Line 2
+        });
+        service.shutdown();
+        System.out.println("All done");
+    }
+}
+
+/****
+ *
+ * Code compiles and executes and simply prints the text: All done,
+ * as well as prints the stack trace and the message for Exception 2, in no particular order.
+ *
+ * Correct answer. The submit method returns a Future object whether it is assigned
+ * to a variable or not, so any exception from the submit method would not be printed to the stack trace,
+ * but would be queried from the Future result. The execute method returns void and any unhandled exceptions will
+ * terminate the thread and print the exception’s stack trace and message.
+ *
+ * */
+
+
+-----------------------------------------------
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class Test2 {
+    public static void main(String[] args) throws InterruptedException {
+        List<Integer> list = new CopyOnWriteArrayList<>();
+        Iterator<Integer> iterator = list.iterator(); // iterator will take a snapshot from the list,
+        // so any changes on the list later wont be reflected on iterator....
+
+        Thread t1 = new Thread(() -> list.add(10));
+        Thread t2 = new Thread(() -> list.add(20));
+        t2.start();
+        t1.start();
+        t1.join();
+
+        while (iterator.hasNext()) {
+            System.out.print(iterator.next() + " ");
+        }
+    }
+}
+
+----------------------------------------------------
+
+schdule service:
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class Test {
+
+
+    public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException {
+
+        ScheduledExecutorService scheduledService = Executors.newSingleThreadScheduledExecutor();
+
+        // it will start after 2 seconds and will schdule every 2 seconds....
+        // Schedule task
+        ScheduledFuture<?> result1 = scheduledService.scheduleWithFixedDelay(() -> System.out.println("hello"), 2, 2, TimeUnit.SECONDS);
+        System.out.println("app started....");
+        System.out.println("is done:"+result1.isDone());
+        Thread.sleep(4000);
+
+        result1.get(1,TimeUnit.SECONDS);
+    }
+}
+
+
+------------------------------------
+
+Schduled task
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class Test {
+
+
+    public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException {
+        /**** Fixed Rate Vs schduled:
+         * In fixed rate, it doesn't matter how long the previous execution took, the next execution will happen when it was scheduled.
+         * With fixed-delay, the next execution will happen X time after the previous finished, even if it was late
+         * ****/
+
+        ScheduledExecutorService scheduledService = null;
+
+        // Factory method to get single threaded Scheduled executor
+        scheduledService = Executors.newSingleThreadScheduledExecutor();
+
+        // Schedule task, schedule will execute only once after X delay of time..
+        // so here the task will start after 4 second and it will not repeat...
+        // schdule can accept callable and runnable.....
+        scheduledService.schedule(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    System.out.println("started " + Thread.currentThread().getName());
+                    Thread.sleep(3000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 4, TimeUnit.SECONDS);
+
+        System.out.println("***********************************");
+    }
+}
+
+
+--------------------------------------
+
+schduled with fixed delay:
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class Test {
+
+
+    public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException {
+        /**** Fixed Rate Vs schduled:
+         * In fixed rate, it doesn't matter how long the previous execution took, the next execution will happen when it was scheduled.
+         * With fixed-delay, the next execution will happen X time after the previous finished, even if it was late
+         * ****/
+
+        ScheduledExecutorService scheduledService = null;
+
+        // Factory method to get single threaded Scheduled executor
+        scheduledService = Executors.newScheduledThreadPool(3,Executors.defaultThreadFactory());
+
+        // scheduleWithFixedDelay u can see that in fixeddelay the execution will happen
+        // only after previous execution finished.... even thor it was late.....
+        scheduledService.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    System.out.println("started " + Thread.currentThread().getName());
+                    Thread.sleep(4000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+
+        System.out.println("***********************************");
+    }
+}
+
+-----------------------------------------
+
+schduled with fixed rate:
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+public class Test {
+
+
+    public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException {
+        /**** Fixed Rate Vs schduled:
+         * In fixed rate, it doesn't matter how long the previous execution took, the next execution will happen when it was scheduled.
+         * With fixed-delay, the next execution will happen X time after the previous finished, even if it was late
+         * ****/
+
+        ScheduledExecutorService scheduledService = null;
+
+        // Factory method to get single threaded Scheduled executor
+        scheduledService = Executors.newScheduledThreadPool(15,Executors.defaultThreadFactory());
+
+        // scheduleWithFixedDelay u can see that in fixeddelay the execution will happen
+        // only after previous execution finished.... even thor it was late.....
+        scheduledService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    System.out.println("started " + Thread.currentThread().getName());
+                    Thread.sleep(7000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+
+        System.out.println("***********************************");
+    }
+}
+
+
+--------------------------------------
+
+CyclicBarrier
+
+
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.*;
+
+public class CyclicBarrierExample {
+    public static void main(String[] args) throws Exception {
+
+        // Construct a CyclicBarrier,
+        // First arg # of parties (tasks)
+        // Second arg Action is a Runnable
+        CyclicBarrier cyclicBarrier = new CyclicBarrier(4, // this should be same number as invokation threads
+                () -> {
+                    System.out.println("Confirming step is complete");
+                });
+
+        // Set up a callable local variable
+        Callable<Boolean> r = () -> {
+
+            // All threads execute step 1
+            step(1);
+            try {
+                cyclicBarrier.await();
+                //cyclicBarrier.await(5, TimeUnit.SECONDS); // use this if the : CyclicBarrier parties > Invokation thread...
+            } catch (BrokenBarrierException e) {
+                System.out.println("Barrier broken = "
+                        + cyclicBarrier.isBroken());
+                System.out.println("Waited but then released...");
+            }
+
+            // All threads execute step 2
+            step(2);
+
+            return true;
+        };
+
+        // Fixed Threads = Will be parties on CyclicBarrier
+        // if Fixed thread < cyclic barrier parties this will produce deadlock , bcoz cyclic was waiting 4 but only 2 invoked...
+        // to overcome ths issue instead we add cyclicBarrier.await() we will add cyclicBarrier.await(5, TimeUnit.SECONDS);
+
+        ExecutorService service = Executors.newFixedThreadPool(4);
+        // Invoke four callable tasks, all the same
+        service.invokeAll(List.of(r, r, r, r));
+
+        System.out.println("Shutting service down");
+        service.shutdown();
+
+    }
+
+    public static void step(int stepNo) throws Exception {
+        int ms = new Random().nextInt(5) * 1000;
+        System.out.println(Thread.currentThread().getName() +
+                " waiting for " + ms + " milliseconds to start step " + stepNo);
+        Thread.sleep(ms);
+
+        System.out.println(Thread.currentThread().getName() +
+                " completed step " + stepNo);
+
+    }
+
+}
+
+--------------------------------------
+
+Notes about shutdown method in Executers:
+
+it does not immediatly stop shutdown running tasks, it will wait them unitl they completed...
+it does not also stop waiting threads from continue running.....
+it DOES reject a NEW task from being executed...
+
+ExecuterService DOES NOT implement auto closeable, so we cant use it with try-with-resource...
+you can use try-with-resource for shutdown and shutdownNow....
+
+       try (Closeable close = executorService::shutdown) {
+
+            }
+
+That ExecutorService has actually two shutdown-related methods; based on the simple fact that both ways of shutting down a service make sense.
+Thus: how would you auto-close a service then? In a consistent manner that works for everybody?!
+So, the reasonable explanation in my eyes: you can't make an ExecutorService a AutoClosable because that
+service does not have a single "close" like operation; but two!
+
+--------------------------------------------------
+
+Submit in ExecuterService has 3 overloaded methods:
+1- Future<?> submit(Runnable)
+2- <T> Future<T> submit(Callable<T>)
+3- <T> Future<T> submit(Runnable, T result)
+
+import java.util.Random;
+import java.util.concurrent.*;
+
+public class SubmitExamples {
+
+    public static void main(String[] args) {
+
+        ExecutorService executorService = null;
+
+        try {
+
+            System.out.println("********************* Future<?> submit(Runnable);  ******************************");
+            executorService = Executors.newSingleThreadExecutor();
+
+            // Submits Runnable and returns void
+            Future<?> firstResult = executorService.submit(
+                    () -> new Random().ints(1, 1000)
+                            .limit(5)
+                            .forEach(System.out::println));
+
+            // Allow thread to complete before proceeding using while loop
+            //  and checking Future.isDone() method.  Polling.
+            while (!firstResult.isDone()) {
+                Thread.sleep(250);
+            }
+
+            // Future.get() returns a null with single argument and
+            // Runnable is first argument
+            System.out.println("firstResult = " + firstResult);
+            System.out.println("firstResult.get() = " + firstResult.get()); // notice here it didnt thro NPE, it just print null value...
+
+            System.out.println("********************* Future<T> submit(Runnable, T result) ******************************");
+            // Submits Runnable and returns second argument as the result
+            Future<String> secondResult = executorService.submit(
+                    () -> new Random().ints(1, 1000)
+                            .limit(5)
+                            .forEach(System.out::println)
+                    , "Thread is finished");
+
+            // Allow thread to complete before proceeding using while loop
+            //  and checking Future.isDone() method
+            while (!secondResult.isDone()) {
+                Thread.sleep(250);
+            }
+
+            // Future.get() returns the second argument when
+            // two arguments passed to submit method
+            System.out.println("secondResult = " + secondResult);
+            System.out.println("secondResult = " + secondResult.get());
+
+
+            System.out.println("********************* Future<?>  submit(Callable)  ******************************");
+            // Submits a Callable that returns a value, Note: that callable return value, runnable does not return a value...
+            // value is passed to the Future
+            Future<?> thirdResult = executorService.submit(
+                    () -> new Random().ints(1, 100_000)
+                            .limit(1000)
+                            .summaryStatistics()
+            );
+
+            // Replace while loop with Future.get() method passing specified
+            // time.
+            System.out.println("thirdResult = " + thirdResult.get(5, TimeUnit.SECONDS)); // we need to handle the exception here..
+            // notice that get(5,seconds) it will wait for 5 seconds then thro timeout exception if the thread did not complete on time..
+
+            //
+            System.out.println("thirdResult = " + thirdResult);
+
+        } catch (TimeoutException | InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            if (executorService != null) executorService.shutdown();
+        }
+    }
+}
+
+
+-----------------------------------------------------
+
+Thread safe sync keyword:
+
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+class TestSync {
+    int count;
+
+    // cant use synchronized with constructors...
+    /*synchronized*/ TestSync(){
+
+    }
+    /*synchronized*/ void bump() {
+        count++;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        TestSync testSync = new TestSync();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        executorService.execute(() -> {
+            for (int i = 0; i < 10; i++) {
+                testSync.bump();
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        executorService.execute(() -> {
+            for (int i = 0; i < 10; i++) {
+                testSync.bump();
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        Thread.sleep(4000);
+        System.out.println(testSync.count); // u will see that every time we run we got different results...
+        // once we make bump method as sync then we will get consistent result...
+        // the final result should be 20....
+    }
+}
+
+
+--------------------------------------
+blocking sync:
+
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+class TestSync {
+    int count;
+
+    // cant use synchronized with constructors...
+    /*synchronized*/ TestSync() {
+
+    }
+
+    void bump() {
+        //synchronized ((count))// cant use sync block with primitives....
+        synchronized (this) {
+            count++;
+        }
+    }
+}
+
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        TestSync testSync = new TestSync();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        executorService.execute(() -> {
+            for (int i = 0; i < 10; i++) {
+                testSync.bump();
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        executorService.execute(() -> {
+            for (int i = 0; i < 10; i++) {
+                testSync.bump();
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        Thread.sleep(4000);
+        System.out.println(testSync.count); // u will see that every time we run we got different results...
+        // once we make bump method as sync then we will get consistent result...
+        // the final result should be 20....
+    }
+}
+
+
+--------------------------------------------
+
+volatile keyword:
+The effect of the volatile keyword is approximately that each individual read or write
+operation on that variable is made atomically visible to all threads.
+however, an operation that requires more than one read/write -- such as i++, which is equivalent to i = i + 1,
+which does one read and one write -- is not atomic, since another thread may write to i between the read and the write.
+The Atomic classes, like AtomicInteger and AtomicReference, provide a wider variety of operations atomically,
+specifically including increment for AtomicInteger.
+
+--------------------------------------------
+
+example about atomicInteger and Sync keyword....
+
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+// This class represents a ball which contains information
+// about who hit the ball and how many times each player hit it
+class TheBallInTheAir2 {
+
+    private String ballType = "Volleyball";
+    // Total number of hits on the ball
+
+    private AtomicInteger hit = new AtomicInteger(0);
+    // Map of players and their hits..
+    private Map<String, Integer> players = Collections.synchronizedMap(new TreeMap<>());
+
+    // Constructor
+    TheBallInTheAir2() {
+        players.put("Jane", 0);
+        players.put("Mary", 0);
+        players.put("Ralph", 0);
+        players.put("Joe", 0);
+    }
+
+    // Method called by threads, adds player to map if not found
+    // or increments value in map
+    public int addHit(String player) {
+
+        if (players.containsKey(player)) {
+            players.computeIfPresent(player, (key, val) -> ++val);
+        } else {
+            // A null is returned if no mapping was found
+            if (players.putIfAbsent(player, 1) != null) {
+                System.out.println("Encountered race condition");
+                players.computeIfPresent(player, (key, val) -> ++val);
+            }
+
+        }
+
+        /******
+         * there are three method to make the output consistant:
+         * 1- make the method syncronized.
+         * 2- make hits syncronized.
+         * syncronized(this){
+         *     hits++
+         * }
+         * 3- make player syncronized:
+         * syncronized(player){
+         *         if (players.containsKey(player)) {
+         *             players.computeIfPresent(player, (key, val) -> ++val);
+         *         } else {
+         *             // A null is returned if no mapping was found
+         *             if (players.putIfAbsent(player, 1) != null) {
+         *                 System.out.println("Encountered race condition");
+         *                 players.computeIfPresent(player, (key, val) -> ++val);
+         *             }
+         *
+         *         }
+         * }
+         * 4- use atomicInt as its thread safe.
+         * 5- we can use  private Map<String, Integer> players = Collections.synchronizedMap(new TreeMap<>()) for player.
+         * but note that here it will produce race thread issue and it will produce unpredictable results, thats why u
+         * should use (players.putIfAbsent(player, 1) != null before u put in hashmap.
+         * read more: https://stackoverflow.com/questions/34510/what-is-a-race-condition
+         *
+         * ***/
+        return hit.incrementAndGet();
+    }
+
+    // Present writeable output
+    public String toString() {
+        return "Total " + ballType + " hits: " + this.hit.get()
+                + ", Player hits: " + players.values().stream().mapToInt(s -> s).sum()
+                + "\nPlayers List: " + players;
+    }
+}
+
+public class SynchronizedMethod2 {
+
+    // Create a shared ball.
+    public static TheBallInTheAir sharedBall = new TheBallInTheAir();
+
+    public static void main(String[] args) {
+        // Set up players
+        String[] players = {"Jane", "Mary", "Ralph", "Joe"};
+        Random r = new Random();
+        // random list of player names, representing their turn to hit ball
+        List<String> playerTurns =
+                Stream.generate(() -> players[r.nextInt(4)])
+                        .limit(100)
+                        .collect(Collectors.toList());
+
+        ExecutorService executorService = null;
+
+        try {
+            executorService = Executors.newFixedThreadPool(5);
+
+            // Start the volleyball game...
+            for (String player : playerTurns) {
+                executorService.submit(() -> sharedBall.addHit(player));
+            }
+
+        } finally {
+            if (executorService != null) {
+                executorService.shutdown();
+                try {
+                    // Wait no longer than 1 second for completion confirmation
+                    executorService.awaitTermination(1, TimeUnit.SECONDS);
+                    System.out.println(sharedBall);
+
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
+                }
+            }
+        }
+    }
+}
+
+---------------------------------------------------
+
+Concurrent collection:
+1- its more preferable when u have the majority of operations are read.
+2- its a thread safe.
+3- iterator never throw ConcurrentModificationException.
+
+--------------------------------------------------
+
+example about synchronizedList:
+
+Synchronized List is a fail-fast iterator, i.e. it will throw ConcurrentModifcationException when the list is modified when one thread is
+iterating over it whereas CopyOnWriteArrayList is a fail-safe iterator, i.e. it will not throw ConcurrentModifcationException even when the
+list is modified when one thread is iterating over it.
+
+read this first: https://stackoverflow.com/questions/40930861/what-is-the-use-of-collections-synchronizedlist-method-it-doesnt-seem-to-syn
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+        final List<String> list = new ArrayList<>();
+        final List<String> synList = Collections.synchronizedList(new ArrayList<>());
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                list.addAll(Arrays.asList("one", "one", "one"));
+                synList.addAll(Arrays.asList("one", "one", "one"));
+            }
+        });
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                list.addAll(Arrays.asList("two", "two", "two"));
+                synList.addAll(Arrays.asList("two", "two", "two"));
+            }
+        });
+
+        t1.start();
+        t2.start();
+
+        Thread.sleep(1000);
+        System.out.println(list);
+        System.out.println(synList);
+    }
+}
+
+
+// note: look inside Collections.synchronizedList and u will see that java sync object inside the methods....
+
+
+---------------------------------------
+
+fail fast example about synList:
+
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+        final List<String> list = new ArrayList<>();
+        final List<String> synList = Collections.synchronizedList(new ArrayList<>());
+
+        synList.addAll(List.of("one", "two", "three", "four"));
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Iterator iterator = synList.iterator();
+                while (iterator.hasNext()) {
+                    try {
+                        Thread.sleep(500);
+                        System.out.println(iterator.next().toString());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Iterator iterator = synList.iterator();
+                while (iterator.hasNext()) {
+                    try {
+                        Thread.sleep(500);
+                        synList.add("five");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        t1.start();
+        t2.start();
+    }
+}
+
+same also when u want to update the list :
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+public class Test {
+
+    public static void main(String[] args) throws InterruptedException {
+        final List<String> list = new ArrayList<>();
+
+        list.addAll(List.of("one", "two", "three", "four"));
+
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Iterator iterator = list.iterator();
+                while (iterator.hasNext()) {
+                    try {
+                        Thread.sleep(500);
+                        System.out.println(iterator.next().toString());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        Thread t2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Iterator iterator = list.iterator();
+                while (iterator.hasNext()) {
+                    try {
+                        Thread.sleep(500);
+                        list.add("five");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        t1.start();
+        t2.start();
+    }
+}
+
+
+------------------------------------
+
+When to use SynchronizedList?
+Since in CopyOnWriteArrayList for every update/modify operation,
+a new separate cloned copy is created and there is overhead on JVM to allocate memory and merge cloned copy with the original copy.
+Thus, in this case, SynchronizedList is a better option.When the size of Arraylist is large.
+When size of Arraylist is large
+
+----------------------------------
+
+example about CopyOnWriteArrayList,
+
+notice in CopyOnWriteArrayList it wont throw ConcurrentModifcationException,
+but in SyncList and ArrayList iterator will throw an exception....
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        List<Integer> list = new CopyOnWriteArrayList<>();
+        Iterator<Integer> iterator = list.iterator(); // iterator will take a snapshot from the list,
+        // so any changes on the list later wont be reflected on iterator....
+
+        Thread t1 = new Thread(() -> list.add(10));
+        Thread t2 = new Thread(() -> list.add(20));
+        t2.start();
+        t1.start();
+        t1.join();
+
+        iterator = list.iterator(); // if u move iterator here then it will take a snapshot of the added values..
+        // bcoz join() already waited until all thread finished...
+
+        while (iterator.hasNext()) {
+            System.out.print(iterator.next() + " ");
+        }
+    }
+}
+
+
+another example about CopyOnWriteArrayList:
+
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class CopyOnWriteExample {
+    public static void testList(List<String> currentList) {
+        System.out.println("----------- Testing " +
+                currentList.getClass().toGenericString());
+        System.out.println("Original State: " + currentList);
+        // Get Iterator
+        Iterator<String> it = currentList.iterator();
+
+        int i = 0;
+
+        // Use iterator
+        System.out.println("Print first three elements: ");
+        while (it.hasNext()) {
+            System.out.println(it.next());
+            // Add some elements while iterating over elements
+            if (i++ == 0) {
+                //currentList.addAll(List.of("James", "Jim", "Joe"));
+                //currentList.remove(it.next()); // here it will show cocurrent modifcation exception if u r passing aList in main method....
+                //it.remove(); //this will thro exception UnsupportedOperationException IF u pass concurrentList in main mathod line (52),
+                //remove,add,set are not supported in CopyOnWriteArrayList iterator..but in normal list iterator its supported
+                // but if u pass aList then this command will not show exception...
+
+            }
+            // break after third element
+            else if (i == 3) break;
+        }
+
+        // Print remaining elements on iterator
+        System.out.println("Printing remaining elements");
+        it.forEachRemaining(System.out::println); // as we can see here the iterator did not print the elements that we added in line 25.
+        // it didnt also throw the exception related on concurrent modification ....
+
+
+        System.out.println("Values = " + currentList + "\n");
+    }
+
+    public static void main(String[] args) {
+
+        // Create an ArrayList and initialize with 5 values
+        List<String> alist = new ArrayList<>(List.of("" +
+                "David", "Evan", "Anne", "Bob", "Carol"));
+
+        // Create a CopyOnWriteArrayList using previous list
+        List<String> concurrentList = new CopyOnWriteArrayList<>(alist);
+
+        testList(alist); // here if u pass aList then it will show runtime exception about concurrent modification exception...
+        // it will thro the exception on line it.next()
+
+    }
+}
+
+-------------------------------------------
+
+TreeMap sorts elements in natural order and doesn't allow null keys because compareTo()
+method throws NullPointerException if compared with null.
+
+-------------------------------------------------------
+ SyncMap and ConcurrentHashMap:
+
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.CopyOnWriteArrayList;
+ import java.util.concurrent.ExecutorService;
+ import java.util.concurrent.Executors;
+
+ public class Test {
+     public static void main(String[] args) throws InterruptedException {
+         //Map<Integer, String> map = new HashMap<>(); // this throw concurrent exception
+         //Map<Integer, String> map = Collections.synchronizedMap(new HashMap<>()); //// this throw concurrent exception
+         Map<Integer, String> map = new ConcurrentHashMap<>(); // // this wil NOT throw concurrent exception
+
+         map.put(1, "baeldung");
+         map.put(2, "HashMap");
+
+         Iterator<Map.Entry<Integer, String>> iterator = map.entrySet().iterator();
+         while (iterator.hasNext()) {
+             map.put(3, "Modification");
+             iterator.next();
+         }
+
+         ExecutorService executorService = Executors.newFixedThreadPool(3);
+
+         executorService.execute(() -> {
+             Iterator iterator1 = map.entrySet().iterator();
+             while (iterator1.hasNext()) {
+                 try {
+                     System.out.println(iterator1.next().toString());
+                     Thread.sleep(500);
+                 } catch (InterruptedException e) {
+                     e.printStackTrace();
+                 }
+             }
+         });
+
+         executorService.execute(() -> {
+             Iterator iterator1 = map.entrySet().iterator();
+             while (iterator1.hasNext()) {
+                 try {
+                     map.put(2, "lol");
+                     Thread.sleep(500);
+                 } catch (InterruptedException e) {
+                     e.printStackTrace();
+                 }
+             }
+         });
+
+     }
+
+     // ConcurrentHashMap does not support null key, it will throw NPE
+     public void allowNullKey_In_ConcurrentHasMap() {
+         Map<String, Integer> map = new ConcurrentHashMap<>();
+         map.put(null, 1);
+     }
+
+     // synchronizedMap allow null keys
+     public void allowNullKey_In_SyncMap() {
+         Map<String, Integer> map = Collections
+                 .synchronizedMap(new HashMap<String, Integer>());
+         map.put(null, 1);
+         System.out.println("key for null=" + map.get(null).equals(1));
+     }
+
+ }
+
+
+------------------------------------------------------
+
+
+Blocking queues:
+
+add and push will throw an exception if queue is full
+offer will return false if its unable to add in queue
+put is blocking and it will wait until able to add in queue..
+take is blocking and it will wait until able to get item from queue...
+
+offer(T,time, unit time) it will wait until X time then return false if unable to add in queue..
+
+example:
+
+
+import java.util.concurrent.*;
+
+public class LinkedBlockingDequeAdds {
+    public static void main(String[] args) throws InterruptedException {
+
+        // Create a blocking deque with an initial capacity
+        BlockingDeque<String> dequeBlocked = new LinkedBlockingDeque<>(4);
+
+        // Test various Offer Methods
+        useOfferMethods(dequeBlocked); // if queue size reached 4 then u cant add anymore, then Offer method return false..
+
+        dequeBlocked.clear();
+
+        // Test various Add Methods
+        useAddMethods(dequeBlocked); // if queue size reached 4 then u cant add anymore, then Add method will throw IllegalStateException
+        // add method will also return boolean, true if added successfully, an exception if deque is full....
+        dequeBlocked.clear();
+
+        // Test Push Method, returns void, available for deque
+        usePushMethod(dequeBlocked);// if queue size reached 4 then u cant add anymore, then push method will throw IllegalStateException
+        // push method will return void,
+        dequeBlocked.clear();
+
+        // this code will fix the handing queue bcoz it will make the thread pop from the queue every 2 seconds....
+        // Schedule a thread to pop an element from the queue
+        ScheduledExecutorService scheduledService =
+                Executors.newScheduledThreadPool(1);
+
+        var thread = scheduledService.scheduleAtFixedRate(() -> {
+            System.out.println("popping queue");
+            System.out.println("Got " + dequeBlocked.pop());
+            System.out.println("dequeBlocked " + dequeBlocked);
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }, 0, 2, TimeUnit.SECONDS);
+
+        // Test offer methods with timeout
+        useOfferMethodsTimed(dequeBlocked);
+
+        Thread.sleep(5000);
+        scheduledService.shutdown();
+
+        // Wait no longer than 20 seconds for completion confirmation
+        scheduledService.awaitTermination(30, TimeUnit.SECONDS);
+    }
+
+    // This method uses offer, offerFirst, offerLast methods and tests
+    // what happens when queue capacity is reached.
+    private static void useOfferMethods(
+            BlockingDeque<String> dequeBlocked) {
+
+        // Adding data with offer, adds data to the tail of the queue
+        boolean wasSuccessful = dequeBlocked.offer("Jane");
+        wasSuccessful = dequeBlocked.offer("Anne");
+
+        // offerLast is equivalent to offer, adds data to the tail
+        wasSuccessful = dequeBlocked.offerLast("John");
+
+        // offerFirst adds data to the head
+        wasSuccessful = dequeBlocked.offerFirst("Mary");
+        System.out.println(dequeBlocked);
+
+        // Any offer method will return a false if unable to add element
+        wasSuccessful = dequeBlocked.offer("Harold");
+        if (wasSuccessful)
+            System.out.println("Harold was added successfully");
+        else System.out.println("Harold could not be added"); // note: offer method does not thro an exception...
+    }
+
+    // This method uses add, addFirst, addLast methods and tests what
+    // happens when queue capacity is reached.
+    private static void useAddMethods(BlockingDeque<String> dequeBlocked) {
+        // Adding data with add, adds data to the tail of the queue,
+        // returns boolean
+        boolean wasSuccessful = dequeBlocked.add("Jane");
+        wasSuccessful = dequeBlocked.add("Anne");
+
+        // addLast is similar to add, adds data to the tail,
+        // but does NOT return a boolean, is void
+        dequeBlocked.addLast("John"); // it will throw an exception if queue is full
+
+        // addFirst adds data to the head, void return
+        dequeBlocked.addFirst("Mary"); // it will throw an exception if queue is full
+        System.out.println(dequeBlocked);
+
+        try {
+
+            // Any of the add methods will throw exception
+            wasSuccessful = dequeBlocked.add("Harold");
+            if (wasSuccessful) System.out.println("Harold was added");
+
+        } catch (IllegalStateException ise) {
+            System.out.println("Harold could not be added: " + ise);
+        }
+    }
+
+    // This method uses push (a deque only method) which returns void
+    // and tests what happens when queue capacity is reached.
+    private static void usePushMethod(
+            BlockingDeque<String> dequeBlocked) {
+
+        // Adding data with push, adds data to the head of the queue
+        dequeBlocked.push("Mary");
+        dequeBlocked.push("Jane");
+        dequeBlocked.push("Anne");
+        dequeBlocked.push("John");
+
+        System.out.println(dequeBlocked);
+        try {
+            // push method returns void, throws exception if not successful
+            dequeBlocked.push("Harold");
+            System.out.println("Harold was added");
+
+        } catch (IllegalStateException ise) {
+            System.out.println("Harold could not be added: " + ise);
+        }
+    }
+
+    // This method uses put, putFirst, putLast methods and tests
+    // what happens when queue capacity is reached.
+    // Note: that blocking dequq will block the method and left it hanging until it can successfully perform the task...
+    private static void usePutMethods(BlockingDeque<String> dequeBlocked)
+            throws InterruptedException {
+
+        // Adding data with put, adds data to the tail of the queue
+        // All the add methods return a void
+        dequeBlocked.put("Jane");
+        dequeBlocked.put("Anne");
+
+        // putLast is equivalent to put, adds data to the tail
+        dequeBlocked.putLast("John");
+
+        // putFirst adds data to the head
+        dequeBlocked.putFirst("Mary");
+        System.out.println(dequeBlocked);
+
+        // A put method will block thread if not successful
+        // and wait until queue has more capacity
+        dequeBlocked.put("Harold");
+    }
+
+    // This method uses the timeout versions of offer methods
+    private static void useOfferMethodsTimed(
+            BlockingDeque<String> dequeBlocked)
+            throws InterruptedException {
+        // Adding data with offer, adds data to the tail of the queue
+        boolean wasSuccessful = dequeBlocked.offer("Jane", 1, TimeUnit.SECONDS);
+        dequeBlocked.offer("Anne", 1, TimeUnit.SECONDS);
+
+        // offerLast is equivalent to offer, adds data to the tail
+        wasSuccessful = dequeBlocked.offerLast("John", 1, TimeUnit.SECONDS);
+
+        // offerFirst adds data to the head
+        wasSuccessful = dequeBlocked.offerFirst("Mary", 1, TimeUnit.SECONDS);
+        System.out.println(dequeBlocked);
+
+        // Any offer method will return a false if unable to add element
+        wasSuccessful =
+                dequeBlocked.offer("Harold", 1, TimeUnit.SECONDS);
+        if (wasSuccessful)
+            System.out.println("Harold was added successfully");
+        else
+            System.out.println("Harold decided not to wait longer" +
+                    " than 1 second");
+
+        wasSuccessful = dequeBlocked.offerFirst("Ida", 15, TimeUnit.SECONDS);
+        if (wasSuccessful)
+            System.out.println("Ida was added successfully");
+        else
+            System.out.println("Ida decided not to wait longer" +
+                    " than 15 seconds");
+    }
+
+}
+
+--------------------------------------------------------
+
+
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.*;
+
+public class LinkedBlockingDequePolls {
+    public static void main(String[] args) throws InterruptedException {
+
+        List staticList = List.of("Jane", "Ralph", "Anne", "Mary", "Ralph",
+                "Anne", "Harold", "Anne", "John", "Carol");
+
+        // Create an empty blocking deque with no initial capacity
+        BlockingDeque<String> dequeBlocked =
+                new LinkedBlockingDeque<>(staticList);
+
+        // Test Poll Methods
+        usePollMethods(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Remove Methods
+        useRemoveMethods(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Pop Method
+        usePopMethod(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        //Test Take Methods
+        // Note: as we will see from the output it will hang
+        useTakeMethods(dequeBlocked);
+
+
+    }
+
+    // This method uses poll, pollFirst, pollLast methods
+    private static void usePollMethods(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Poll Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with remove, removes data from the head of the queue
+        String dequedPerson = dequeBlocked.poll();
+        System.out.println("After poll(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeLast removes data from the tail
+        dequedPerson = dequeBlocked.pollLast();
+        System.out.println("After pollLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeFirst removes data from the head, same as remove()
+        dequedPerson = dequeBlocked.pollFirst();
+        System.out.println("After pollFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        dequeBlocked.clear();
+        System.out.println("After clearing the deque");
+        // Any remove method will return a false if unable to remove element
+        dequedPerson = dequeBlocked.poll();
+        System.out.println("After poll(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+    }
+
+    // This method uses remove(), remove(e), removeFirst(), removeLast(),
+    // also removeFirstOccurrence(e) and removeLastOccurrence(e)
+    private static void useRemoveMethods(
+            BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Remove Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with remove, removes data from the head of queue
+        String dequedPerson = dequeBlocked.remove();
+        System.out.println("After remove(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // Removing data with remove, passing an object, removes 1st element
+        // that equals object passed, returns a boolean, and not the element
+        boolean wasRemoved = dequeBlocked.remove("Ralph");
+        System.out.println("After remove(Ralph), wasRemoved = "
+                + wasRemoved + " : " + dequeBlocked);
+
+        // removeLast removes data from the tail
+        dequedPerson = dequeBlocked.removeLast();
+        System.out.println("After removeLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeFirst removes data from the head, same as remove()
+        dequedPerson = dequeBlocked.removeFirst();
+        System.out.println("After removeFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeFirstOccurrence(Object o) is same as removeFirst(Object o)
+        wasRemoved = dequeBlocked.removeFirstOccurrence("Anne");
+        System.out.println(
+                "After removeFirstOccurrence(Anne), wasRemoved = "
+                        + wasRemoved + " : " + dequeBlocked);
+
+        // removeLastOccurrence removes last occurrence
+        wasRemoved = dequeBlocked.removeLastOccurrence("Anne");
+        System.out.println(
+                "After removeLastOccurrence(Anne), wasRemoved = "
+                        + wasRemoved + " : " + dequeBlocked);
+
+        wasRemoved = dequeBlocked.removeLastOccurrence("Anne");
+        System.out.println("" +
+                "After removeLastOccurrence(Anne), wasRemoved = "
+                + wasRemoved + " : " + dequeBlocked);
+        try {
+            dequeBlocked.clear();
+            System.out.println("After clearing the deque");
+            // Any noargs remove method (remove, removeFirst(),
+            // removeLast()) throws exception if queue is empty
+            dequedPerson = dequeBlocked.remove();
+
+        } catch (NoSuchElementException ise) {
+            System.out.println("Queue empty: " + ise);
+        }
+
+        // Other remove methods that accept an argument return false
+        // if queue is empty.
+        wasRemoved = dequeBlocked.removeLastOccurrence("Anne");
+        System.out.println(
+                "After removeLastOccurrence(Anne), wasRemoved = "
+                        + wasRemoved + " : " + dequeBlocked);
+
+    }
+
+    // This method uses pop
+    private static void usePopMethod(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Pop Method -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // pop() is same as remove(), removes element from head and
+        // returns element.
+        String dequedPerson = dequeBlocked.pop();
+        System.out.println("After pop(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        try {
+            dequeBlocked.clear();
+            System.out.println("After clearing the deque");
+            // pop method on empty queue throws exception, like remove()
+            dequedPerson = dequeBlocked.pop();
+
+        } catch (NoSuchElementException ise) {
+            System.out.println("Queue empty: " + ise);
+        }
+    }
+
+    // This method uses take, takeFirst, takeLast methods which block
+    // when queue is empty
+    private static void useTakeMethods(BlockingDeque<String> dequeBlocked)
+            throws InterruptedException {
+        System.out.println("------------ Take Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with take, removes data from the head of the queue
+        String dequedPerson = dequeBlocked.take();
+        System.out.println("After take(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // takeLast removes data from the tail
+        dequedPerson = dequeBlocked.takeLast();
+        System.out.println("After takeLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // takeFirst removes data from the head, same as take()
+        dequedPerson = dequeBlocked.takeFirst();
+        System.out.println("After takeFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        dequeBlocked.clear();
+        System.out.println("After clearing the deque");
+        // Any take method will block if queue is empty
+        dequedPerson = dequeBlocked.take();
+        System.out.println("After take(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+    }
+}
+
+-----------------------------------------------
+
+The following method throws exception if unable to complete the operation:
+1- boolean add(T), boolean addFirst(T), boolean addLast(T).
+2- void push(T).
+3- E remove(), E removeFirst(), E removeLast().
+4- E pop().
+5- E element(). // this will examine the element and it wont remove it...
+6- E getFirst(), E getLast(). // this will examine the element and it wont remove it...
+
+The following method return false if unable to complete the operation:
+1- boolean offer, boolean offerFirst, boolean offerLast.
+2- boolean poll, boolean pollFirst, boolean pollLast.
+3- boolean removeFirstOccurrence(e), removeLastOccurrence(e).
+
+The following method has overloaded method with time span:
+1- boolean offer(E, timeout, unit), boolean offerFirst(E, timeout, unit), boolean offerLast(E, timeout, unit).
+2- boolean poll(E, timeout, unit), boolean pollFirst(E, timeout, unit), boolean pollLast(E, timeout, unit).
+
+
+The following method will BLOCK the queue.
+1- void put(e), void putFirst(e), void putLast(e).
+2- E take(), E takeFirst(), E takeLast().
+
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+
+public class LinkedBlockingDequePeeks {
+    public static void main(String[] args) throws InterruptedException {
+
+        List staticList = List.of("Jane", "Ralph", "Anne", "Mary", "Ralph",
+                "Anne", "Harold", "Anne", "John", "Carol");
+        // Create a blocking deque with no specified capacity
+
+        BlockingDeque<String> dequeBlocked =
+                new LinkedBlockingDeque<>(staticList);
+
+        // Test Peek Methods
+        usePeekMethods(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Get Methods
+        useGetMethods(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Element Method
+        useElementMethod(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+    }
+
+    // This method uses getFirst, getLast methods
+    private static void useGetMethods(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Get Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // getLast queries data from the tail
+        String dequedPerson = dequeBlocked.getLast();
+        System.out.println("getLast() returns " + dequedPerson +
+                ", Queue unchanged: " + dequeBlocked);
+
+        // getFirst queries data from the head, same as remove()
+        dequedPerson = dequeBlocked.getFirst();
+        System.out.println("getFirst() returns " + dequedPerson +
+                ", Queue unchanged: " + dequeBlocked);
+
+        try {
+            dequeBlocked.clear();
+            System.out.println("After clearing the deque");
+            // Either getFirst() or getList will
+            //throw exception if queue is empty
+            dequedPerson = dequeBlocked.getFirst();
+
+        } catch (NoSuchElementException ise) {
+            System.out.println("Queue empty: " + ise);
+        }
+    }
+
+    // This method uses peek, peekFirst, peekLast methods
+    private static void usePeekMethods(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Peek Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Querying data with peek, queries the head of the queue
+        String dequedPerson = dequeBlocked.peek();
+        System.out.println("Peeked at " + dequedPerson +
+                " , Queue unchanged : " + dequeBlocked);
+
+        // peekLast queries data from the tail
+        dequedPerson = dequeBlocked.peekLast();
+        System.out.println("Peeked at last element " + dequedPerson +
+                " , Queue unchanged: " + dequeBlocked);
+
+        // peekFirst queries data from the head, same as peek()
+        dequedPerson = dequeBlocked.peekFirst();
+        System.out.println("Peeked at first element " + dequedPerson +
+                " , Queue unchanged: " + dequeBlocked);
+
+        dequeBlocked.clear();
+        System.out.println("After clearing the deque");
+        // Any peek method will return a false if unable to remove element
+        dequedPerson = dequeBlocked.peek();
+        System.out.println("After peek(), " + dequedPerson);
+    }
+
+    // This method uses element
+    private static void useElementMethod(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Element  Method -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Using the element() method
+        String dequedPerson = dequeBlocked.element();
+        System.out.println("element() returns " + dequedPerson +
+                ", Queue unchanged: " + dequeBlocked);
+
+        try {
+            dequeBlocked.clear();
+            System.out.println("After clearing the deque");
+            // element method on empty queue throws exception
+            dequedPerson = dequeBlocked.element();
+
+        } catch (NoSuchElementException ise) {
+            System.out.println("Queue empty: " + ise);
+        }
+    }
+}
+
+
+-----------------------------------------------
+
+another example about poll in blocking queue:
+
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.*;
+
+
+// this to solve the hanging app during take, we will create a new method called usePollMethodsWithTimeout
+
+public class LinkedBlockingDequePolls {
+    public static void main(String[] args) throws InterruptedException {
+
+        List staticList = List.of("Jane", "Ralph", "Anne", "Mary", "Ralph",
+                "Anne", "Harold", "Anne", "John", "Carol");
+
+        // Create an empty blocking deque with no initial capacity
+        BlockingDeque<String> dequeBlocked =
+                new LinkedBlockingDeque<>(staticList);
+
+        // Test Poll Methods
+        usePollMethods(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Remove Methods
+        useRemoveMethods(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Pop Method
+        usePopMethod(dequeBlocked);
+        dequeBlocked.addAll(staticList);
+
+        // Test Poll Methods
+        usePollMethodsWithTimeout(dequeBlocked);
+
+
+
+
+    }
+
+    // This method uses poll, pollFirst, pollLast methods
+    private static void usePollMethods(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Poll Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with remove, removes data from the head of the queue
+        String dequedPerson = dequeBlocked.poll();
+        System.out.println("After poll(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeLast removes data from the tail
+        dequedPerson = dequeBlocked.pollLast();
+        System.out.println("After pollLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeFirst removes data from the head, same as remove()
+        dequedPerson = dequeBlocked.pollFirst();
+        System.out.println("After pollFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        dequeBlocked.clear();
+        System.out.println("After clearing the deque");
+        // Any remove method will return a false if unable to remove element
+        dequedPerson = dequeBlocked.poll();
+        System.out.println("After poll(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+    }
+
+    // This method uses remove(), remove(e), removeFirst(), removeLast(),
+    // also removeFirstOccurrence(e) and removeLastOccurrence(e)
+    private static void useRemoveMethods(
+            BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Remove Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with remove, removes data from the head of queue
+        String dequedPerson = dequeBlocked.remove();
+        System.out.println("After remove(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // Removing data with remove, passing an object, removes 1st element
+        // that equals object passed, returns a boolean, and not the element
+        boolean wasRemoved = dequeBlocked.remove("Ralph");
+        System.out.println("After remove(Ralph), wasRemoved = "
+                + wasRemoved + " : " + dequeBlocked);
+
+        // removeLast removes data from the tail
+        dequedPerson = dequeBlocked.removeLast();
+        System.out.println("After removeLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeFirst removes data from the head, same as remove()
+        dequedPerson = dequeBlocked.removeFirst();
+        System.out.println("After removeFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // removeFirstOccurrence(Object o) is same as removeFirst(Object o)
+        wasRemoved = dequeBlocked.removeFirstOccurrence("Anne");
+        System.out.println(
+                "After removeFirstOccurrence(Anne), wasRemoved = "
+                        + wasRemoved + " : " + dequeBlocked);
+
+        // removeLastOccurrence removes last occurrence
+        wasRemoved = dequeBlocked.removeLastOccurrence("Anne");
+        System.out.println(
+                "After removeLastOccurrence(Anne), wasRemoved = "
+                        + wasRemoved + " : " + dequeBlocked);
+
+        wasRemoved = dequeBlocked.removeLastOccurrence("Anne");
+        System.out.println("" +
+                "After removeLastOccurrence(Anne), wasRemoved = "
+                + wasRemoved + " : " + dequeBlocked);
+        try {
+            dequeBlocked.clear();
+            System.out.println("After clearing the deque");
+            // Any noargs remove method (remove, removeFirst(),
+            // removeLast()) throws exception if queue is empty
+            dequedPerson = dequeBlocked.remove();
+
+        } catch (NoSuchElementException ise) {
+            System.out.println("Queue empty: " + ise);
+        }
+
+        // Other remove methods that accept an argument return false
+        // if queue is empty.
+        wasRemoved = dequeBlocked.removeLastOccurrence("Anne");
+        System.out.println(
+                "After removeLastOccurrence(Anne), wasRemoved = "
+                        + wasRemoved + " : " + dequeBlocked);
+
+    }
+
+    // This method uses pop
+    private static void usePopMethod(BlockingDeque<String> dequeBlocked) {
+        System.out.println("------------ Pop Method -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // pop() is same as remove(), removes element from head and
+        // returns element.
+        String dequedPerson = dequeBlocked.pop();
+        System.out.println("After pop(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        try {
+            dequeBlocked.clear();
+            System.out.println("After clearing the deque");
+            // pop method on empty queue throws exception, like remove()
+            dequedPerson = dequeBlocked.pop();
+
+        } catch (NoSuchElementException ise) {
+            System.out.println("Queue empty: " + ise);
+        }
+    }
+
+    // This method uses take, takeFirst, takeLast methods which block
+    // when queue is empty
+    private static void useTakeMethods(BlockingDeque<String> dequeBlocked)
+            throws InterruptedException {
+        System.out.println("------------ Take Methods -------------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with take, removes data from the head of the queue
+        String dequedPerson = dequeBlocked.take();
+        System.out.println("After take(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // takeLast removes data from the tail
+        dequedPerson = dequeBlocked.takeLast();
+        System.out.println("After takeLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // takeFirst removes data from the head, same as take()
+        dequedPerson = dequeBlocked.takeFirst();
+        System.out.println("After takeFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        dequeBlocked.clear();
+        System.out.println("After clearing the deque");
+        // Any take method will block if queue is empty
+        dequedPerson = dequeBlocked.take();
+        System.out.println("After take(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+    }
+
+    // This method uses poll, pollFirst, pollLast methods with
+    // timeout time span defined
+    private static void usePollMethodsWithTimeout(
+            BlockingDeque<String> dequeBlocked)
+            throws InterruptedException {
+        System.out.println("-------- Timed out Poll Methods ---------");
+        System.out.println("Original state of Deque: " + dequeBlocked);
+
+        // Removing data with poll, removes data from the head of the queue
+        String dequedPerson = dequeBlocked.poll(1, TimeUnit.SECONDS);
+        System.out.println("After poll(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // pollLast removes data from the tail
+        dequedPerson = dequeBlocked.pollLast(1, TimeUnit.SECONDS);
+        System.out.println("After pollLast(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        // pollFirst removes data from the head
+        dequedPerson = dequeBlocked.pollFirst(1, TimeUnit.SECONDS);
+        System.out.println("After pollFirst(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+
+        dequeBlocked.clear();
+        System.out.println("After clearing the deque");
+        // Any remove method will return a null if timeout occurs
+        dequedPerson = dequeBlocked.poll(1, TimeUnit.SECONDS);
+        System.out.println("After poll(), " + dequedPerson +
+                " was removed: " + dequeBlocked);
+    }
+}
+
+---------------------------------------------------------------
+
+Thread deadlock issue:
+
+
+// Simple Neighbor class, has a name
+class Neighbor {
+    private final String name;
+
+    // Constructor
+    public Neighbor(String name) {
+        this.name = name;
+    }
+
+    // synchronized method cannot execute if the instance is locked,
+    // will lock instance when operation is invoked, and release lock
+    // when operation completes
+    public  void greet(Neighbor neighbor) {
+        System.out.println("Hi " + neighbor.name
+                + ", how are you?");
+
+        neighbor.respond(this);
+    }
+
+    // synchronized method cannot execute if the instance is locked,
+    // Must wait for lock on instance to be released
+    // Note: if u add synchronized to this method then it will become deadlock bcoz it will lock the method...
+    //  note: that u cant make both method sync bcoz it will become deadlock, only one should be sync or non of them
+    public synchronized void respond(Neighbor neighbor) {
+        System.out.println("I am fine, " + neighbor.name +
+                ", how are the kids? ");
+    }
+
+}
+
+// Simple deadlock example
+public class DeadLockExample {
+
+    public static void main(String[] args) {
+        // Create two neighbors
+        Neighbor dave = new Neighbor("Dave");
+        Neighbor craig = new Neighbor("Craig");
+
+        // Create and execute two threads,
+        // each has the neighbor greet the other.
+        new Thread(() -> dave.greet(craig)).start();
+        new Thread(() -> craig.greet(dave)).start();
+    }
+}
+
+--------------------------------------
+

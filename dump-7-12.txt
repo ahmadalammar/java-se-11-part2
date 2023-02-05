@@ -1,0 +1,2485 @@
+7-2 note:
+Resources are closed in the reverse order of their declaration. So r2 is closed first and then r1.
+class Resource1 implements AutoCloseable {
+    @Override
+    public void close() {
+        System.out.println("Resource1");
+    }
+}
+
+class Resource2 implements AutoCloseable {
+    @Override
+    public void close() {
+        System.out.println("Resource2");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        try(Resource1 r1 = new Resource1(); Resource2 r2 = new Resource2()) {
+            System.out.println(“Test”);
+        }
+    }
+}
+
+--------------------------
+
+7-4 note:
+For null resources, close() method is not called and hence NullPointerException is not thrown at runtime.
+HELLO is printed on to the console.
+
+
+class Resource implements AutoCloseable {
+    public void close() {
+        System.out.println("CLOSE");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        try(Resource r = null) {
+            System.out.println("HELLO");
+        }
+    }
+}
+
+----------------------------
+
+7-5 note:
+Variable r in try-with-resource is implicitly final and hence can’t be re-initialized.
+‘r = new Resource();’ causes compilation error.
+
+class Resource implements AutoCloseable {
+public void close() {
+System.out.println(“CLOSE”);
+}
+}
+
+public class Test {
+public static void main(String[] args) {
+try(Resource r = null) {
+r = new Resource();
+System.out.println(“HELLO”);
+}
+}
+}
+
+---------------------------
+7-6 -------------> tricky
+when try-with-resource throws exception then it will first close the connection in reverse order then
+it will catch the exception....
+
+
+class Resource1 implements AutoCloseable {
+    public void m1() throws Exception {
+        System.out.print("A");
+        throw new Exception("B");
+    }
+
+    public void close() {
+        System.out.print("C");
+    }
+}
+
+class Resource2 implements AutoCloseable {
+    public void m2() {
+        System.out.print("D");
+    }
+
+    public void close() throws Exception {
+        System.out.print("E");
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        try (Resource1 r1 = new Resource1();
+             Resource2 r2 = new Resource2()) {
+            r1.m1();
+            r2.m2();
+        } catch (Exception e) {
+            System.out.print(e.getMessage());
+        }
+    }
+}
+
+the output will be: AECB
+
+-----------------------------------
+7-8 note:
+Statement `arr1 = arr2;` causes compilation error as char [] is not
+compatible with int [] even though char is compatible with int.
+
+
+public class Test {
+    public static void main(String[] args) {
+        int[] arr1 = {10, 100, 1000}; //Line n1
+        char[] arr2 = {'x', 'y', 'z'}; //Line n2
+        arr1 = arr2; // Line n3
+
+        int ii=110;
+        char cc = 110;
+        //char cc = ii; //compiler error
+
+        for (int i = 0; i < arr1.length; i++) {
+            System.out.print(arr1[i] + " "); //Line n4
+        }
+    }
+}
+
+--------------------------------
+7-9 note:
+this is valid string declaration:
+String arr1 [], arr2, arr3 = null; //Line n1
+
+arr2 = arr3 = arr1; //Line n2 this show compiler error
+=> arr2 = (arr3 = arr1); //assignment operator is right to left associative.
+arr3 is of String type and arr1 is of String [] type, hence (arr3 = arr1) causes compilation error.
+
+this is also valid to delcare array with zero size:
+byte [] arr = new byte[0];
+System.out.println(arr[0]); // but it will throw a runtime error...
+
+cant use isBlank or any other string function before init the variables..
+thats why the below code will throw a runtime exception....
+String [] arr = new String[1];
+System.out.println(arr[0].isBlank());
+
+-------------------------------
+
+7-19 --------------------> tricky
+
+assume we have this: arr[i++] = arr[++i] = 40
+Multiple assignment operators are available, so let’s group it first.
+=> arr[i++] = (arr[++i] = 40); //Assignment operator is right to left associative
+Above expression is valid, hence Line n2 compiles successfully.
+Let’s solve the expression now. Left operand is ‘arr[i++]’ and right operand is ‘(arr[++i] = 40)’. Left operand is evaluated first.
+=> arr[0] = (arr[++i] = 40); //i = 1
+Right hand operand is evaluated next.
+=> arr[0] = (arr[2] = 40); //i = 2
+=> arr[0] = 40; //i = 2, arr[2] = 40.
+
+public class Test {
+    public static void main(String[] args) {
+        int[] arr = {10, 20, 30}; //Line n1
+        int i = 0;
+        arr[i++] = arr[++i] = 40; //Line n2
+        for (var x : arr) //Line n3
+            System.out.println(x);
+
+    }
+}
+
+output 40
+       20
+       40
+
+----------------------------------
+
+7-22 -------------> tricky
+
+notice that if we put a string like ":" then it wont throw NPE,
+but if without string then it throw NPE:
+
+        Boolean[] arr2 = new Boolean[2];
+        System.out.println(arr2[0] + ":" + arr2[1]); // it will compiles and print null:null
+
+        Double[] arr = new Double[2];
+        System.out.println(arr[0] + arr[1]); // NPE
+
+        var arr3 = new Double[2];
+        System.out.println(arr[0] + arr[1]); //NPE
+
+
+----------------------------------
+7-24 note:
+int[] a1 = { 10, 15, 20 };
+int[] a2 = { 10, 20, 30 };
+System.out.println(Arrays.mismatch(a1, a2) + Arrays.compare(a1, a2));
+
+System.out.println(Arrays.mismatch(a1, a2) + Arrays.compare(a1, a2));
+
+=> System.out.println(1 + -1);
+
+=> System.out.println(0);
+
+-----------------------------------
+7-25 note:
+For comparing the array contents, these methods take help of static compare(x, y) method defined
+in respective Wrapper classes. For example, Arrays.compare(char[] a, char[] b)
+uses Character.compare(char x, char y) to compare array contents.
+For the given code, Arrays.compare(c1, c2) returns 1, which is the result of Character.compare(‘L’, ‘K’).
+
+       char[] c1 = {'T', 'A', 'L', 'L'};
+       char[] c2 = {'T', 'A', 'L', 'K'};
+
+       System.out.println(Arrays.mismatch(c1, c2) * Arrays.compare(c1, c2));
+
+-----------------------------------
+
+7- 26 note:
+        byte[] arr1 = {5, 10, 15, 20};
+        byte[] arr2 = {5, 10, 15, 17};
+        System.out.println(Arrays.mismatch(arr1, arr2)); // 3
+        System.out.println(Arrays.compare(arr1, arr2)); // 3
+        System.out.println(Arrays.equals(arr1, arr2)); // false
+
+------------------------------------
+
+7-27 ----------> tricky
+
+Arrays.compare(new char[] { 'A' }, null);
+If a is null and b is not null, then compare method returns -1.
+If b is null and a is not null, then compare method returns 1.
+If both a and b are null, then compare method returns 0.
+Therefore, System.out.print(Arrays.compare(new char[] { 'A' }, null)); prints 1 on to the console.
+
+
+Arrays.mismatch(null, new int[] { 1 })
+Above methods find and return the index of the first mismatch between two primitive arrays,
+otherwise return -1 if no mismatch is found. The index will be in the range of 0 (inclusive) up to the length (inclusive) of the smaller array.
+It throws NullPointerException, if either array is null.
+
+Arrays.equals(new short[] { 10 }, null)
+Above methods return true if both of the arrays are null or both contain the same elements in the same order, otherwise return false.
+Therefore, System.out.print(Arrays.equals(new short[] { 10 }, null)); prints false on to the console.
+
+Arrays.compare(null, null);
+Arrays.mismatch(null, null);
+Arrays.equals(null, null);
+all above three method will causes compilation failure as it is an ambiguous call.
+
+
+ try {
+        System.out.print(Arrays.compare(new char[] { 'A' }, null));
+        } catch (Exception ex) {
+            System.out.print('A');
+        }
+
+        try {
+            System.out.print(Arrays.mismatch(null, new int[] { 1 }));
+        } catch (Exception ex) {
+            System.out.print('B');
+        }
+
+        try {
+            System.out.print(Arrays.equals(new short[] { 10 }, null));
+        } catch (Exception ex) {
+            System.out.print('C');
+        }
+
+----------------------------------
+7-34 ----------> tricky
+given:
+StringBuilder[] array1 = { new StringBuilder(“Manners”), new StringBuilder(“maketh”),
+                         new StringBuilder(“Man”) };
+StringBuilder[] array2 = { new StringBuilder(“Manners”), new StringBuilder(“maketh”),
+                           new StringBuilder(“man”) };
+
+and we have :
+System.out.print(Arrays.mismatch(array1, array2)); // it will print 0
+Statement Arrays.mismatch(array1, array2) returns 0 as StringBuilder class doesn’t override equals(Object) method
+and hence the implementation of equals(Object) method Object class is invoked. equals(Object) method defined in
+Object class uses == operator to check the equality and based on that 1st element (at index 0) of both the arrays don’t match.
+
+Arrays.compare(array1, array2)
+It simply returns ‘M’ – ‘m’ value, which is 77 – 109 = -32.
+Output of the given code is: 0-32.
+
+note that Capital letter comes before small letters...
+
+public class Test {
+    public static void main(String[] args) {
+
+        StringBuilder[] array1 = {new StringBuilder("Manners"), new StringBuilder("maketh"),
+                new StringBuilder("Man")};
+        StringBuilder[] array2 = {new StringBuilder("Manners"), new StringBuilder("maketh"),
+                new StringBuilder("man")};
+        System.out.print(Arrays.mismatch(array1, array2));
+        System.out.print(Arrays.compare(array1, array2));
+    }
+}
+
+--------------------------------
+7-35 ------------> tricky
+
+given the code below:
+
+public class Test {
+    public static void main(String[] args) {
+
+        String[] array1 = {"OCP", "11", null};
+        String[] array2 = {"OCP", "11"};
+        String[] array3 = {null, "OCP", "11"};
+
+        System.out.print(Arrays.compare(array1, array2));
+        System.out.print(Arrays.compare(array2, array3));
+        System.out.print(Arrays.compare(array3, array2));
+    }
+}
+
+Notes:
+2. While comparing, a null element is less than a non-null element:
+
+    A. If element from 1st array is null, and corresponding element from 2nd array is not null, return -1
+
+       E.g., Arrays.compare(new String[] {null}, new String[] {“JAVA”}); returns -1.
+
+    B. If element from 2nd array is null, and corresponding element from 1st array is not null, return 1.
+
+       E.g., Arrays.compare(new String[] {“JAVA”}, new String[] {null}); returns 1.
+
+    C. If element from 1st array is null, and corresponding element from 2nd array is also null, return 0.
+
+       Arrays.compare(new String[] {null}, new String[] {null}); returns 0.
+
+Arrays.compare(array1, array2): array2 is a proper prefix of array1, hence Arrays.compare(array1, array2) = array1.length – array2.length = 3 – 2 = 1.
+
+Arrays.compare(array2, array3): array2[0] = “OCP” and array3[0] = null. Based on above “2.B.”, it returns 1.
+
+Arrays.compare(array3, array2): array3[0] = null and array2[0] = “OCP”. Based on above “2.A.”, it returns -1.
+
+Hence output of given code is: 11-1
+
+
+------------------------------------------
+
+7-42 -------> tricky
+the question was mention about the compilation successfully, not throwing the runtime exception...
+
+-------------------------------------------------------------
+
+8-2 note:
+notice that  List list is wildcard and its list of object...
+but in for look u iterate and assume that its string...
+if u change List list -> List<String> list then it works fine....
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new ArrayList<>();
+        list.add("A");
+        list.add("B");
+        for(String str : list) {
+            System.out.print(str);
+        }
+    }
+}
+
+------------------------
+
+8-3 note:
+
+public class Test {
+    private static final <X extends Integer, Y extends Integer> void add(X x, Y y) {
+        System.out.println(x+y);
+    }
+
+    public static void main(String[] args) {
+        add(10, 20);
+    }
+}
+
+---------------------------
+8-4 note:
+public class Test<T> {
+    T[] obj;
+
+    public Test(T[] t) {
+        obj = t;
+        //obj = new T[100]; // compiler error, bcoz cant init generic type directly...
+    }
+
+    public T[] get() {
+        return obj;
+    }
+
+    public static void main(String[] args) {
+        Test<String> test = new Test<>(new String[]{"hello", "world"});
+        String[] arr = test.get();
+        System.out.println(arr.length);
+    }
+}
+
+-----------------------
+
+8-5 note:
+public class Test<T> {
+
+    static T obj; // compiler error bcoz as we know static will be init during runtime...
+    // but during runtime we dont know what type is this generic bcoz its static....
+
+}
+
+----------------------------
+
+8-12 note:
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new ArrayList<>();
+        list.add("C");
+        list.add("Z");
+        list.add("A");
+        list.add("R");
+        list.subList(1, 2).clear(); // <--- notice that its mutable....
+        System.out.println(String.join("", list));
+    }
+}
+
+------------------------------
+
+8-14 note:
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new ArrayList<>(); // line n1
+        list.add("P");
+        list.add("O");
+        list.add("T");
+
+        List subList = list.subList(1, 2); //Line n2,  notice that sublist will pass by reference...
+        // so any changes at subList will be also reflected at subList....
+        subList.set(0, "E"); //Line n3
+        System.out.println(String.join("", list));
+
+        // notice if u change line n1 or line n2 to List<String> then it will compiles successfully...
+    }
+}
+
+-------------------------------
+
+8-15 note:
+
+notice that for list.remove it will remove only first match, not all matches...
+
+class Student {
+    private String name;
+    private int age;
+
+    Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String toString() {
+        return "Student[" + name + ", " + age + "]";
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        List<Student> students = new ArrayList<>();
+
+        Student st1 = new Student("James", 25);
+
+        students.add(st1);
+        students.add(new Student("James", 27));
+        students.add(st1);
+        students.add(st1);
+
+        students.remove(st1);
+
+        for (Student stud : students) {
+            System.out.println(stud);
+        }
+    }
+}
+
+-------------------------------
+
+8-17 note:
+
+remove(Object) method removes the first occurrence of matching object and equals(Object)
+method decides whether 2 objects are equal or not. equals(Object) method has NOT been overridden by the Person class.
+In fact, equals(Person) is overloaded. But overloaded version is not invoked while equating the Person objects.
+
+class Person {
+    private String name;
+    private int age;
+
+    Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String toString() {
+        return "Person[" + name + ", " + age + "]";
+    }
+
+    public boolean equals(Person obj) { // try to change Person to Object then its override already...
+        if(obj instanceof Person) {
+            Person person = (Person)obj;
+            if(this.name.equals(person.name) && this.age == person.age) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        List<Person> persons = new ArrayList<>();
+        persons.add(new Person("Liam", 25));
+        persons.add(new Person("Liam", 27));
+        persons.add(new Person("Liam", 25));
+        persons.add(new Person("Liam", 25));
+
+        persons.remove(new Person("Liam", 25));
+
+        for(Person person : persons) {
+            System.out.println(person);
+        }
+    }
+}
+
+-----------------------
+
+8-18 note:
+the below code will throw a runtime exception
+bcoz u remove item from list within the same for loop..
+
+If you want to successfully remove the items from ArrayList, while using Iterator or ListIterator,
+then use Iterator.remove() or ListIterator.remove() method and NOT List.remove(…) method. Using List.remove(…) method
+while iterating the list (using the Iterator/ListIterator or for-each) may throw java.util.ConcurrentModificationException.
+
+
+public class Test {
+    public static void main(String[] args) {
+        List<String> dryFruits = new ArrayList<>();
+        dryFruits.add("Walnut");
+        dryFruits.add("Apricot");
+        dryFruits.add("Almond");
+        dryFruits.add("Date");
+
+        for(String dryFruit : dryFruits) {
+            if(dryFruit.startsWith("A")) {
+                dryFruits.remove(dryFruit); // it will throw java.util.ConcurrentModificationException
+            }
+        }
+
+        System.out.println(dryFruits);
+    }
+}
+
+
+the code below will not throw runtime exception:
+public class Test {
+    public static void main(String[] args) {
+        List<String> dryFruits = new ArrayList<>();
+        dryFruits.add("Walnut");
+        dryFruits.add("Apricot");
+        dryFruits.add("Almond");
+        dryFruits.add("Date");
+
+        ListIterator<String> ss = dryFruits.listIterator();
+
+        while (ss.hasNext()) {
+            if (ss.next().startsWith("A")) {
+                ss.remove();
+            }
+        }
+
+        System.out.println(dryFruits);
+    }
+}
+
+
+------------------------------
+
+8-19 note:
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List<String> sports = new ArrayList<>();
+        sports.add("Windsurfing");
+        sports.add("Aerobics");
+        sports.add("Archery");
+        sports.add("Diving");
+
+        Iterator<String> iterator = sports.iterator(); // note that Iterator must be Iterator<String>, otherwise it will show compiler
+        // error at line 18.
+        while(iterator.hasNext()) {
+            String sport = iterator.next();
+            if(sport.startsWith("A")) {
+                sports.remove(sport); // <--- notice that u r removing from the list, not from the iterator,
+                // then it will show a runtime error.
+                // if u change to iterator.remove(); then it will removed successfully......
+            }
+        }
+
+        System.out.println(sports);
+    }
+}
+
+
+-----------------------------------
+
+8-24 -------------> tricky
+
+Iterator and ListIterater allow to remove elements while iterating. But next() should be called before remove().
+In this case, remove() is called before next() and hence IllegalStateException is thrown at runtime.
+
+
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        List colors = new ArrayList<>();
+        colors.add("RED");
+        colors.add("GREEN");
+        colors.add("BLUE");
+        Iterator iter = colors.iterator();
+        while(iter.hasNext()) {
+            iter.remove();
+            iter.next(); // if u make remove() after next() then it works fine and print 0....
+        }
+        System.out.println(colors.size());
+    }
+}
+
+
+------------------------------
+
+8-25 note:
+
+notice that if u have list of objects then any changes on the object will be also reflected on list too...
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        StringBuilder sb = new StringBuilder("Hello");
+        List list = new ArrayList<>();
+        list.add(sb);
+        list.add(new StringBuilder("Hello"));
+        list.add(sb);
+        sb.append("World!");
+
+        System.out.println(list);
+    }
+}
+
+-------------------------
+8-27 note:
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new ArrayList<>();
+        list.add("ONE");
+        list.add("TWO");
+        list.add("THREE");
+        list.add("THREE");
+
+        String s = (String) list.remove(0); // it will remove "ONE", remove(index) will return Object...
+        System.out.println(s);
+
+        // remove(object) will return boolean, true if the item exist and removed successfully,
+        // and false if item not found...
+        boolean status = list.remove("ONE");
+        System.out.println(status);
+
+
+//        if(list.remove(2)) {
+//            list.remove("THREE");
+//        }
+
+        System.out.println(list);
+    }
+}
+
+----------------------
+8-28 note:
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        Boolean[] arr = new Boolean[2];
+        List list = new ArrayList<>();
+        list.add(arr[0]);
+        list.add(arr[1]);
+        list.add(null);
+
+        if(list.remove(null))
+            System.out.println("lol");
+
+        System.out.println(list);
+    }
+}
+
+--------------------
+8-32 note:
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new ArrayList<>(3); //even tho u set the size 3 here but u can still add more...
+        list.add(0, "MOVE");
+        list.add(0, "ON");
+        list.add(0, "MOVE");
+        list.add(0, "ON");
+        list.add(0, "MOVE");
+        list.add(0, "ON");
+        list.add(0, "MOVE");
+        list.add(0, "ON");
+        System.out.println(list);
+    }
+}
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new ArrayList<>(4);
+        list.add(0, "MOVE");
+        list.add(2, "ON"); // this will throw runtime exception bcoz u have added only one item
+        // to the list which is "MOVE"....
+
+        System.out.println(list);
+    }
+}
+
+--------------------------------
+
+8-34 note:
+
+++i1; => As Integer object is immutable, hence ++i1; creates a new Integer object with value 11
+and suppose this newly created Integer object is stored at memory location 38AB00. This means variable ‘i1’
+stops referring to Integer object at the memory location 25AF06 and starts referring to Integer object at the memory location 38AB00.
+
+public class Test {
+    public static void main(String[] args) {
+        ArrayList original = new ArrayList<>(); //Line n1
+        Integer i = 10;
+        original.add(i); //Line n2
+
+        ArrayList<Integer> cloned = (ArrayList) original.clone();
+        Integer i1 = cloned.get(0); // Integer is immutable, thats why when changing ++i1 then it will create a new Integer..
+        ++i1;
+
+        System.out.println(cloned);
+    }
+}
+
+
+---------------------------------
+
+8-35 note:
+for this statement: trafficLight.add(1, "RED");
+There is no element at index 0 so call to add element at index 1, “trafficLight.add(1, “RED”);” throws an instance of java.lang.IndexOutOfBoundsException.
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List trafficLight = new ArrayList<>();
+        trafficLight.add(1, "RED");
+        trafficLight.add(2, "ORANGE");
+        trafficLight.add(3, "GREEN");
+
+        trafficLight.remove(Integer.valueOf(2));
+
+        System.out.println(trafficLight);
+    }
+}
+
+
+--------------------------
+
+8-39 -------------------> tricky
+
+notice the remove method in list behave differently for string and char..
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List<String> list = new ArrayList<>();
+        list.add(0, "E");
+        list.add("X");
+        list.add(1, "P");
+        list.add(3, "O");
+
+        if(list.contains("O")) {
+            list.remove("O"); // it will remove based on Object "O"
+        }
+
+        for(String ch : list) {
+            System.out.print(ch);
+        }
+    }
+}
+// it will print EPX....
+
+
+// for char...
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List<Character> list = new ArrayList<>();
+        list.add(0, 'E');
+        list.add('X');
+        list.add(1, 'P');
+        list.add(3, 'O');
+
+        if(list.contains('O')) {
+            list.remove('O');
+        }
+
+        for(char ch : list) {
+            System.out.print(ch);
+        }
+    }
+}
+
+// it will thro java.lang.IndexOutOfBoundsException bcoz at remove method it
+// interpret remove('O') as removing index remove('O') ---> remove(79);
+
+------------------------------------
+
+8-43 -------------> tricky
+
+notice that the output for first list.get(0) == list.get(1) is true
+bcoz the value range is within -127 -> 127
+but for list.get(2) == list.get(3) it return false bcoz its greater than 127..
+
+For 3rd statement, list.add(227); => Auto-boxing creates an integer object for 227.
+For 4th statement, list.add(227); => As 227 is greater than 127, hence auto-boxing creates another integer object for 227.
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String [] args) {
+        List list = new ArrayList();
+
+        list.add(27);
+        list.add(27);
+
+        list.add(227);
+        list.add(227);
+
+        System.out.println(list.get(0) == list.get(1));
+        System.out.println(list.get(2) == list.get(3));
+    }
+}
+
+
+------------------------------
+
+8-48 note:
+
+import java.util.ArrayList;
+
+public class Test {
+    public static void main(String[] args) {
+        var list = new ArrayList<>();
+        list.add(null);
+        list.add(null);
+        list.add(null);
+        System.out.println(list.remove(0) + ":" + list.remove(null));
+    }
+}
+
+-------------------------
+
+8-50 note:
+
+below code will show compiler error:
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        var list = new ArrayList<>(); //Line n1. try to change it to new ArrayList<Integer>();
+        list.add(7);
+        list.add(14);
+        list.add(21);
+
+        var sum = 0; //Line n2
+        for(int i : list){ //Line n3
+            sum += i;
+        }
+        System.out.println(sum);
+    }
+}
+
+********side note:
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+       List list = new ArrayList();
+       list.add(1);
+       list.add(2);
+       list.add(3);
+
+       list.remove(Integer.valueOf(1));
+
+        System.out.println(list);
+    }
+}
+
+
+--------------------------------
+9-1 note:
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+
+        List list = new ArrayList<>(Arrays.asList(1,2,3,4,5,6,7,8,9,10));
+        list.removeIf(i -> i % 2 == 1); // compiler error, need to make list is List<Integer>...
+        System.out.println(list);
+    }
+}
+
+
+-----------------------------
+
+9-3 note:
+
+Arrays.asList is immutable and u cant modify it...
+
+import java.util.Arrays;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = Arrays.asList("ALL", "IS");
+        list.add("WELL"); // it will throw runtime exception Exception in thread "main" java.lang.UnsupportedOperationException
+        list.forEach(System.out::print);
+    }
+}
+
+
+--------------------------------
+
+9-4 -----------> tricky
+
+list1 is list of object bcoz we didnt specify the elements inside,,
+list2 is list of string bcoz we added strings elements inside,,
+line n3 assigning object list to string list, thats why it shows compiler error....
+
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        var list1 = List.of(); //Line n1
+        var list2 = List.of("A"); //Line n2
+        list1 = list2; //Line n3
+        System.out.println(list1.size()); //Line n4
+    }
+}
+
+if u make list1 is list of string, then it compiles fine:
+
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        var list1 = List.of("A"); //Line n1
+        var list2 = List.of("A","B","C"); //Line n2
+        list1 = list2; //Line n3
+        System.out.println(list1.size()); //Line n4, it will print 3
+    }
+}
+
+
+----------------------------------
+
+9-6 ---------> tricky
+
+Calling any mutator method on the List(add, addAll, set, remove, removeIf, removeAll, retainAll) will always
+cause UnsupportedOperationException to be thrown. But if the list element of unmodifiable list itself is mutable,
+then contents of element can be changed.
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        var list = new ArrayList(); //Line n1
+        list.add("A");
+        list.add("M");
+        var list_of_list = List.of(list); //Line n2
+        list_of_list.get(0).set(1, "N"); //Line n3
+        list_of_list.get(0).forEach(System.out::print); //Line n4
+    }
+}
+// it will print AN...
+
+******* side note:
+
+import java.util.Arrays;
+
+public class Test {
+    public static void main(String[] args) {
+        var list1 = Arrays.asList('A', 'B', 'D');
+        //list1.add('E'); // this will throw runtime exception,
+        list1.set(0,'N'); // this one okay bcoz it does not add, or remove the list itself...
+        System.out.println(list1); //[N, B, D]
+    }
+}
+
+--------------------------------
+
+9-8 ------------------> tricky
+HashSet makes use of hashCode to find out the correct bucket
+To avoid duplicate in the given Set, override hashCode() method in Student class:
+
+in below code,
+HashSet in this case cannot find out duplicate Student objects and 3 Student objects are added to the Set.
+System.out.println(students.size()); => Prints 3 on to the console.
+
+import java.util.*;
+
+class Student {
+    private String name;
+    private int age;
+
+    Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String toString() {
+        return "Student[" + name + ", " + age + "]";
+    }
+
+// notice if u added the hashCode then it will ignore the duplicated items, and
+// in that case it will print 2, NOT 3,,,
+// note: that it wont throw a runtime exception in case u added a duplicate item...
+
+//    public int hashCode() {
+//        return name.hashCode() + age;
+//    }
+
+    public boolean equals(Object obj) {
+        if(obj instanceof Student) {
+            Student stud = (Student)obj;
+            return this.name.equals(stud.name) && this.age == stud.age;
+        }
+        return false;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Set students = new HashSet<>();
+        students.add(new Student("James", 20));
+        students.add(new Student("James", 20));
+        students.add(new Student("James", 22));
+
+        System.out.println(students.size());
+    }
+}
+
+--------------------------
+
+9-9 note:
+
+TreeSet requires you to provide either Comparable or Comparator. If you don’t provide Comparator explicitly,
+then for natural ordering your class should implement Comparable interface.
+Student class doesn’t use Comparable, hence ClassCastException is thrown at runtime.
+
+import java.util.*;
+
+class Student {
+    private String name;
+    private int age;
+
+    Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public int hashCode() {
+        return name.hashCode() + age;
+    }
+
+    public String toString() {
+        return "Student[" + name + ", " + age + "]";
+    }
+
+    public boolean equals(Object obj) {
+        if (obj instanceof Student) {
+            Student stud = (Student) obj;
+            return this.name.equals(stud.name) && this.age == stud.age;
+        }
+        return false;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Set students = new TreeSet<>();
+        students.add(new Student("James", 20));
+        students.add(new Student("James", 20));
+        students.add(new Student("James", 22));
+
+        System.out.println(students.size());
+    }
+}
+
+-------------------------------------------
+
+9-10 note:
+
+import java.util.*;
+
+class Student {
+    private String name;
+    private int age;
+
+    Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public int hashCode() {
+        return name.hashCode() + age;
+    }
+
+    public String toString() {
+        return "Student[" + name + ", " + age + "]";
+    }
+
+    public boolean equals(Object obj) {
+        if (obj instanceof Student) {
+            Student stud = (Student) obj;
+            return this.name.equals(stud.name) && this.age == stud.age;
+        }
+        return false;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public static int compareByName(Student s1, Student s2) {
+        return s1.getName().compareTo(s2.getName());
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        // u can add your own static method to compare in the constructor
+        Set students = new TreeSet<>(Student::compareByName);
+        students.add(new Student("James", 20));
+        students.add(new Student("James", 20));
+        students.add(new Student("James", 22));
+
+        System.out.println(students.size());
+    }
+}
+
+
+--------------------------------------------
+
+****** side note:
+Uppercase characters appears before lowercase characters.
+
+----------------------------------------
+
+9-12 note:
+TreeSet cannot contain null values. Hence, ‘new TreeSet<>(Arrays.asList(null,null,null));’ throws NullPointerException.
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        Set set = new TreeSet<>(Arrays.asList(null, null, null));
+        long count = set.stream().count();
+        System.out.println(count);
+    }
+}
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        String s = null; // even if u inderectly put null to variable then add in set it will show runtime error...
+        Set set = new TreeSet<>(Arrays.asList(s, s, s));
+        long count = set.stream().count();
+        System.out.println(count);
+    }
+}
+-------------------------------------------
+
+9-13 note:
+
+HashSet cares about uniqueness and allows 1 null value.
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        Set set = new HashSet<>(Arrays.asList(null, null, null));
+        long count = set.stream().count();
+        System.out.println(count);
+    }
+}
+
+--------------------------------
+
+9-14 note:
+
+new TreeSet<>(Arrays.asList(“red”, “green”, “blue”, “gray”)); => [blue, gray, green, red].
+set.ceiling(“gray”) => Returns the least value greater than or equal to the given value, ‘gray’.
+set.floor(“gray”) => Returns the greatest value less than or equal to the given value, ‘gray’.
+set.higher(“gray”) => Returns the least value strictly greater than the given value, ‘green’.
+set.lower(“gray”) => Returns the greatest value strictly less than the given value, ‘blue’.
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        NavigableSet set = new TreeSet<>(Arrays.asList("red", "green", "blue", "gray"));
+        System.out.println(set.ceiling("gray"));
+        System.out.println(set.floor("gray"));
+        System.out.println(set.higher("gray"));
+        System.out.println(set.lower("gray"));
+    }
+}
+
+------------------------------------
+
+9-15 note:
+
+Set.Of(...) create an unmodifiable set containing specified elements.
+These methods throw NullPointerException – if an element is null or IllegalArgumentException – if the elements are duplicates
+
+import java.util.Set;
+
+public class Test {
+    public static void main(String[] args) {
+        Set set = Set.of(10, null, 20, 40, null); //Line n1, it will throw NPE...
+        System.out.println(set.size());
+    }
+}
+
+
+import java.util.Set;
+
+public class Test {
+    public static void main(String[] args) {
+        Set set = Set.of(10, 10, 20, 40, 20); //Line n1, it will throw java.lang.IllegalArgumentException
+        System.out.println(set.size());
+    }
+}
+
+--------------------------------------------
+
+9-19 note:
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Test {
+    public static void main(String[] args) {
+        var list = List.of("A", "E", "I", "O", "U"); //Line n1
+        var set1 = Set.copyOf(list); //Line n2
+
+        // Note: Map.of(...) must pass key,value .....
+        var map = Map.of(1, "U", 2, "O", 3, "I", 4, "E", 5, "A"); //Line n3
+        var set2 = Set.copyOf(map.values()); //Line n4
+
+        System.out.println(set1.equals(set2)); //Line n5, it will show true...
+    }
+}
+
+-----------------------------------------
+
+9-20----------> tricky
+
+import java.util.Set;
+
+public class Test {
+    public static void main(String[] args) {
+        var sb1 = new StringBuilder("A");
+        var sb2 = new StringBuilder("B");
+        var set1 = Set.of(sb1, sb2); //Line n1
+        var set2 = Set.copyOf(set1); //Line n2
+        System.out.println((set1 == set2) + ":" + set1.equals(set2)); //Line n3
+    }
+}
+
+-----------------------------------------
+
+9-21 note:
+in Set, To check the equality of the Elements, equals(Object) method of the elements is invoked.
+StringBuilder class doesn’t override equals(Object) method and hence two StringBuilder objects containing same texts are not considered equal.
+Therefore, `set1.equals(set2)` evaluates to false.
+
+import java.util.Set;
+
+public class Test {
+    public static void main(String[] args) {
+        var set1 = Set.of(new StringBuilder("GOD"), new StringBuilder("IS"), new StringBuilder("GREAT"));
+        var set2 = Set.of(new StringBuilder("GOD"), new StringBuilder("IS"), new StringBuilder("GREAT"));
+        System.out.println((set1 == set2) + ":" + set1.equals(set2)); //false:false
+
+        var set11 = Set.of("GOD", "IS", "GREAT");
+        var set22 = Set.of("GOD", "IS", "GREAT");
+        System.out.println((set11 == set22) + ":" + set11.equals(set22)); //false:true
+
+        var set111 = Set.of(new StringBuilder("GOD"), new StringBuilder("IS"), new StringBuilder("GREAT")); //Line n1
+        var set222 = Set.copyOf(set111); //Line n2
+        System.out.println((set111 == set222) + ":" + set111.equals(set222)); //true:true
+
+        StringBuilder sb1 = new StringBuilder("GOD");
+        StringBuilder sb2 = new StringBuilder("IS");
+        StringBuilder sb3 = new StringBuilder("GREAT");
+        var set1111 = Set.of(sb1, sb2, sb3);
+        var set2222 = Set.of(sb1, sb2, sb3);
+        System.out.println((set1111 == set2222) + ":" + set1111.equals(set2222)); //false:true
+
+        StringBuilder sb11 = new StringBuilder("GOD");
+        StringBuilder sb22 = new StringBuilder("GOD");
+        System.out.println((sb11 == sb22) + ":" + sb11.equals(sb22)); //false:false
+    }
+}
+
+---------------------------------
+
+9-22 note:
+
+TreeMap is the sorted map on the basis on natural ordering of keys (if comparator is not provided).
+
+import java.util.*;
+
+enum TrafficLight {
+    RED, YELLOW, GREEN
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Map<TrafficLight, String> map = new TreeMap<>();
+        map.put(TrafficLight.GREEN, "GO");
+        map.put(TrafficLight.RED, "STOP");
+        map.put(TrafficLight.YELLOW, "READY TO STOP");
+
+        for (String msg : map.values()) {
+            System.out.println(msg);
+        }
+
+        System.out.println("****************************");
+        Map<String, String> map2 = new TreeMap<>();
+        map2.put("key1", "GO");
+        map2.put("key3", "READY TO STOP");
+        map2.put("key2", "STOP");
+        map2.put("key2", "STOP2"); // even thor u add same key, it will just replace old value with the new value...
+
+        for (String msg : map2.values()) {
+            System.out.println(msg);
+        }
+    }
+}
+
+-------------------------------------------
+9-24 -------------> tricky a bit
+
+HashMap and LinkedHashMap can accept 1 null key but TreeMap cannot accept null keys.
+
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        Map map = new LinkedHashMap<>();
+        map.put(null, "zero");
+        map.put(1, "one");
+
+        System.out.println(map);
+
+        Map map2 = new HashMap();
+        map2.put(null, "zero");
+        map2.put(1, "one");
+
+        System.out.println(map2);
+
+        Map map3 = new TreeMap();
+        map3.put(null, "zero");
+        map3.put(1, "one");
+
+        System.out.println(map3);
+
+    }
+}
+
+
+------------------------------------
+9-25 note:
+TreeMap is sorted map based on the natural ordering of keys. So, map has entries: {11=Sri Nagar, 25=Pune, 32=Mumbai, 39=Chennai}.
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        NavigableMap map = new TreeMap<>();
+        map.put(25, "Pune");
+        map.put(32, "Mumbai");
+        map.put(11, "Sri Nagar");
+        map.put(39, "Chennai");
+
+        //headMap(K toKey, boolean inclusive) => returns the map till toKey, if inclusive is true. Hence the output is: {11=Sri Nagar, 25=Pune}.
+        System.out.println(map.headMap(25, true));
+
+        ////NavigableMap tailMap(K fromKey, boolean inclusive); =>
+        // Returns a view of the portion of this map whose keys are greater than (or equal to, if ‘inclusive’ is true) fromKey.
+        System.out.println(map.tailMap(25, true)); //{25=Pune, 32=Mumbai, 39=Chennai}
+
+        System.out.println(map.firstEntry()); //11=Sri Nagar
+        System.out.println(map.lastEntry()); //39=Chennai
+
+        System.out.println(map.descendingMap()); //{39=Chennai, 32=Mumbai, 25=Pune, 11=Sri Nagar}
+
+        System.out.println(map.floorKey(30)); //25
+        System.out.println(map.ceilingKey(30)); //32
+    }
+}
+
+
+---------------------------------------------
+
+9-26 note:
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        NavigableMap map = new TreeMap<>();
+        map.put(25, "Pune");
+        map.put(32, "Mumbai");
+        map.put(11, "Sri Nagar");
+        map.put(39, "Chennai");
+
+        System.out.println(map.headMap(25)); // default is inclusive=false
+        System.out.println(map.tailMap(25)); // default is inclusive=true
+    }
+}
+
+-------------------------------------------
+9-28 note:
+
+Map.of methods throw NullPointerException – if any key or value is null or IllegalArgumentException – if the keys are duplicates
+
+
+import java.util.Map;
+
+public class Test {
+    public static void main(String[] args) {
+        var map = Map.of("ONE", 1, "TWO", 2, "THREE", 4, "THREE", 3); //Line n1
+        var res = 0;
+        for(Integer num : map.values()) { //Line n2
+            res += num;
+        }
+        System.out.println(res);
+    }
+}
+
+-------------------------------------------
+
+9-29 note:
+Map.Of can support only 10 key, value....
+To provide more than 10 key-value pairs use, Map.ofEntries?(Map.Entry… entries) method.
+
+public class Test {
+    public static void main(String[] args) {
+        var map = Map.of(
+                1, "A",
+                2, "B",
+                3, "C",
+                4, "D",
+                5, "E",
+                6, "F",
+                7, "G",
+                8, "H",
+                9, "I",
+                10, "J",
+                11, "K"
+        );
+        var res = "";
+        for(String str : map.values()) {
+            res += str;
+        }
+        System.out.println(res);
+    }
+}
+
+------------------------------------------------
+
+9-31 note:
+
+deque.add(100); => {*100}.  * represents HEAD of the deque.
+
+deque.add(200); => {*100, 200}.  add(E e) invokes addLast(e) method.
+
+deque.addFirst(300); => {*300, 100, 200}.
+
+deque.addLast(400); => {*300, 100, 200, 400}.
+
+deque.remove(200); => {*300, 100, 400}.  Deque interface doesn’t have remove(int index) method.
+
+System.out.println(deque.getFirst()); => Prints 300 on to the console.
+
+You should be aware of other methods from Deque interface as well, such as:
+
+removeFirst(); => Removes the first element from the Deque.
+
+removeLast(); => Removes the last element from the Deque.
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+        Deque deque = new ArrayDeque<>();
+        deque.add(100);
+        deque.add(200);
+        deque.addFirst(300);
+        deque.addLast(400);
+        deque.remove(200);
+
+        System.out.println(deque.getFirst());
+    }
+}
+
+------------------------------------
+
+9-32 note:
+
+push, pop and peek are Stack’s terminology.
+
+push(E) calls addFirst(E), pop() calls removeFirst() and peek() invokes peekFirst(), it just retrieves the first element (HEAD) but doesn’t remove it.
+
+deque.push(Boolean.valueOf(“abc”)); => [*false]. * represents HEAD of the deque.
+
+deque.push(Boolean.valueOf(“tRuE”)); => [*true, false].
+
+deque.push(Boolean.valueOf(“FALSE”)); => [*false, true, false].
+
+deque.push(true); => [*true, false, true, false].
+
+deque.pop() => removes and returns the HEAD element, true in this case. deque => [*false, true, false].
+
+deque.peek() => retrieves but doesn’t remove the HEAD element, false in this case. deque => [*false, true, false].
+
+deque.size() => 3.  Hence output is ‘true:false:3’.
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Map;
+
+public class Test {
+    public static void main(String[] args) {
+
+        System.out.println(Boolean.valueOf("abc")); // it will return false if u pass random strings....
+
+        Deque deque = new ArrayDeque<>();
+        deque.push(Boolean.valueOf("true"));
+        deque.push(Boolean.valueOf("tRuE"));
+        deque.push(Boolean.valueOf("true"));
+        deque.push(true);
+        System.out.println(deque.pop() + ":" + deque.peek() + ":" + deque.size());
+
+    }
+}
+
+---------------------------------------
+
+9-33 note:
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = new LinkedList<>();
+        list.add("ONE");
+        list.add("TWO");
+        list.add("THREE");
+
+        System.out.println(list); // notice the output will be is same order... [ONE, TWO, THREE]
+        list.remove(1); // in list u need to specify index or object to  remove, but in Queue its not necessary
+        System.out.println(list);
+
+        System.out.println("**************** Queue **************");
+        Queue queue = new LinkedList<>();
+        queue.add("ONE");
+        queue.add("TWO");
+        queue.add("THREE");
+
+        System.out.println(queue);
+        queue.remove();  // in Queue if u did not set the index then it will remove first one,
+        // notice that if u try to remove(0) then it will take 0 as an object NOT as index...
+        System.out.println(queue);
+    }
+}
+
+-----------------------------------
+9-34 note:
+
+A queue is designed to have elements inserted at the end of the queue, and elements removed from the beginning of the queue.
+Where as Dequeue represents a queue where you can insert and remove elements from both ends of the queue.
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class Test {
+    public static void main(String[] args) {
+        Deque chars = new ArrayDeque<>();
+        chars.add('A'); // add function will add to end of the queue.....
+        chars.add('B');
+        chars.add('C');
+        chars.add('D');
+        //chars.addFirst('A');
+        //chars.addLast('Z');
+        System.out.println(chars); //[A, B, C, D]
+        chars.remove(); // it will remove first....
+        //chars.removeFirst();
+        //chars.removeLast();
+        System.out.println(chars);
+
+        chars.add('C');
+        chars.remove();
+
+        System.out.println(chars);
+
+        System.out.println("****************** Queue ******************");
+        Queue queue = new LinkedList();
+        queue.add('A');
+        queue.add('B');
+        queue.add('C');
+        queue.add('D');
+        System.out.println(queue);
+        queue.remove();
+        System.out.println(queue);
+
+    }
+}
+
+---------------------------
+
+9-35 -----------> tricky
+if u have only one element in queue and u invoked remove() 2 times then
+it will throw a runtime exception...java.util.NoSuchElementException
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+public class Test {
+    public static void main(String[] args) {
+        Deque chars = new ArrayDeque<>();
+        chars.add('A');
+        chars.remove();
+        chars.remove();
+
+        System.out.println(chars);
+    }
+}
+
+---------------------------------
+9-36 note:
+
+ArrayDeque cannot store null, hence Line n2 throws NullPointerException exception.
+
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) throws Exception {
+        List list = Arrays.asList("oca", null, "ocp", "java", "null"); //Line n1
+        Deque deque = new ArrayDeque(list); //Line n2
+        System.out.println(deque.size()); //Line n3
+
+        System.out.println("****************** Arrays.asList *****************");
+        List list1 = Arrays.asList(null, 1, 2, 4); // it accepts nulls
+        List list2 = List.of(null, 2, 3, 4); // does not accept nulls ..
+        List list3 = List.copyOf(null, 1, 2, 3); // compiler error....
+        List list4 = List.copyOf(list1); //  does not accept nulls ..
+    }
+}
+
+---------------------------------------
+
+9-37 note:
+
+import java.util.Set;
+import java.util.TreeSet;
+
+class Employee implements Comparable<Employee> { // or u can just -> implements Comparable
+    // but in that case compareTo will be Object and u need to case it manually ... compareTo(Object o)....
+    private String name;
+    private int age;
+
+    Employee(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "{" + name + ", " + age + "}";
+    }
+
+    @Override
+    public int compareTo(Employee o) {
+        return o.age - this.age; // this condition will sort the result from higher to lower based on age.....
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Set employees = new TreeSet<>();
+        employees.add(new Employee("Stella", 31));
+        employees.add(new Employee("Neha", 23));
+        employees.add(new Employee("Hou Jian", 42));
+        employees.add(new Employee("Smita", 29));
+
+        System.out.println(employees);
+    }
+}
+
+---------------------------------------
+9-39 note:
+
+import java.util.Arrays;
+
+public class Test {
+    public static void main(String[] args) {
+        String[] arr = {"**", "***", "*", "*****", "****"};
+        Arrays.sort(arr, (s1, s2) -> s1.length() - s2.length()); // notice here we have compare(s1,s2),
+        // and it will print from lowest to highest.......
+        for (String str : arr) {
+            System.out.println(str);
+        }
+    }
+}
+
+--------------------------------------
+
+9-41 ---------> tricky
+
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+class Point {
+    public int x; // note that x is private, so u cant access it from outside the class, thats why it shows
+    // compiler error at Comparator class....
+    public int y;
+
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    @Override
+    public String toString() {
+        return "Point(" + x + ", " + y + ")";
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        List points = new ArrayList<>();
+        points.add(new Point(4, 5));
+        points.add(new Point(6, 7));
+        points.add(new Point(2, 2));
+
+        Collections.sort(points, new Comparator<Point>() { // notice that we have to add <Point> in Comparator<Point>
+            // otherwise the compare function will take compare(Object o1, Object o2) and u have to cast it manually...
+
+            @Override
+            public int compare(Point o1, Point o2) {
+                return o1.x - o2.x; // if x was private then cant access it here....
+            }
+        });
+
+        System.out.println(points);
+    }
+}
+
+-------------------------------------------
+
+9-42 tricky
+Comparator interface has compare(…) method and not compareTo(…) method.
+Make sure to check the accessibility and interface method details before working with the logic.
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+class Point {
+    private int x;
+    private int y;
+
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    @Override
+    public String toString() {
+        return "Point(" + x + ", " + y + ")";
+    }
+}
+
+public class Test {
+    public static void main(String [] args) {
+        List points = new ArrayList<>();
+        points.add(new Point(4, 5));
+        points.add(new Point(6, 7));
+        points.add(new Point(2, 2));
+
+        Collections.sort(points, new Comparator<Point>() {
+            public int compareTo(Point o1, Point o2) {
+                return o1.getX() - o2.getX();
+            }
+        });
+
+        System.out.println(points);
+    }
+}
+
+-------------------------------------------
+
+9-44 note:
+If null Comparator is passed to sort method, then elements are sorted in natural order (based on Comparable interface implementation).
+
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = Arrays.asList("M", "R", "A", "P");
+        Collections.sort(list, null);
+        System.out.println(list);
+    }
+}
+
+--------------------------------------------
+
+9-45 -------------> tricky
+
+Sorting is working on 2nd letter of the array elements, which means 5, 4, 3, 2, 1.
+Sorting is in ascending order (1, 2, 3, 4, 5) hence the output is:  E1 D2 C3 B4 A5
+
+import java.util.Arrays;
+import java.util.Comparator;
+
+public class Test {
+    public static void main(String[] args) {
+        String [] arr = {"A5", "B4", "C3", "D2", "E1"};
+        Arrays.sort(arr, Comparator.comparing(s -> s.substring(1)));
+        for(String str : arr) {
+            System.out.print(str + " ");
+        }
+    }
+}
+
+--------------------------------------------------
+9- 48 note:
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+public class Test {
+    public static void main(String[] args) {
+        List list = Arrays.asList("#####", "#", "##", "####", "###");
+        Comparator<String> comp = Comparator.comparing(s -> s);
+        Collections.sort(list, comp.reversed());
+        printCodes(list);
+
+    }
+
+    private static void printCodes(List<String> list) {
+        for (String str : list) {
+            System.out.println(str);
+        }
+    }
+}
+
+
+----------------------------------------
+
+9-49 note:
+
+Comparator.comparing(Person::getFirstName).reversed().thenComparing(Person::getLastName)
+=> Returns a Comparator for sorting the records in descending order of first name and in case first name matches,
+then ascending order of last name.
+
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
+class Person {
+    private String firstName;
+    private String lastName;
+
+    public Person(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String toString() {
+        return "{" + firstName + ", " + lastName + "}";
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        List list = Arrays.asList(
+                new Person("Tom", "Riddle"),
+                new Person("Tom", "Hanks"),
+                new Person("Yusuf", "Pathan"));
+
+
+
+        /*****
+         *    list.stream().sorted(Comparator.comparing(
+         *                 Person::getFirstName).reversed()
+         *         ).forEach(System.out::println);
+         *
+         * reversed only will print :
+         * {Yusuf, Pathan}
+         * {Tom, Riddle}
+         * {Tom, Hanks}
+         * ***/
+
+        list.stream().sorted(Comparator.comparing(
+                        Person::getFirstName).reversed()
+                .thenComparing(Person::getLastName)).forEach(System.out::println);
+
+        /******
+         *
+         * {Yusuf, Pathan}
+         * {Tom, Hanks}
+         * {Tom, Riddle}
+         *
+         * ****/
+    }
+}
+
+
+----------------------------------------
+
+9-50 note:
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
+class Student implements Comparator<Student> {
+    private String name;
+    private String exam;
+
+    public Student() {
+        super();
+    }
+
+    public Student(String name, String exam) {
+        this.name = name;
+        this.exam = exam;
+    }
+
+    public int compare(Student s1, Student s2) {
+        return s2.name.compareToIgnoreCase(s1.name);
+    }
+
+    public String toString() {
+        return '{' + name + ", " + exam + '}';
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Student stud1 = new Student("John", "OCA");
+        Student stud2 = new Student("Jack", "OCP");
+        Student stud3 = new Student("Rob", "OCP");
+        List list = Arrays.asList(stud1, stud2, stud3);
+        list.sort(new Student());
+        list.forEach(System.out::println);
+    }
+}
+
+-----------------------------------
+
+10-6 note:
+the following statements is true about java modules:
+ Modular jars loaded from --module-path are automatic modules.
+ Classes found in –classpath are part of an unnamed module.
+ A module must be declared in module-info.java file.
+ java.base exports all of the Java platforms core packages
+ The foundational APIs of the Java SE Platform are found in the java.base module.
+ It is possible but undesirable to configure modules’ exports from the command line
+
+the following is reason why we use java modules:
+ improves application robustness
+ improves security and maintainability
+-----------------------------------
+
+10-11 note:
+
+public class Test {
+
+    public void test(Object[] o) {
+        System.out.println("am an array object");
+    }
+
+    public void test(long[] o) {
+        System.out.println("am an array long");
+    }
+
+    public void test(long o) {
+        System.out.println("am just long...");
+    }
+
+//    public void test(int... o) {
+//        System.out.println("am an array int...");
+//    }
+
+//    public void test(Object o) {
+//        System.out.println("am an object");
+//    }
+
+    public static void main(String[] args) {
+        int[] arr = new int[10];
+        //new Test().test(arr); // notice for array the behaviour is different...
+
+        int j = 10;
+        new Test().test(j);
+    }
+}
+
+----------------------------------------
+10-23 note:
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        char letter = 'a';
+        switch (letter) {
+            case 'a' | 'b':
+                System.out.println("hello");
+                break;
+            case 'a':
+                System.out.println("hello2");
+                break;
+        }
+    }
+}
+
+note: this is valid array declartion:
+
+int[][] arr = {{1, 2, 3}, {1, 2, 3, 4, 5}};
+
+--------------------------------------------
+Which two commands are used to identify class and module dependencies?
+
+ jdeps --list-deps
+ java --show-module-resolution
+
+---------------------------------------------
+
+10-32 note:
+
+Which two modules include APIs in the Java SE Specification?
+ jdk.httpserver
+ java.logging
+
+---------------------------------------------
+
+10-37 note:
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        String s = new String("ORACLE");
+        String s1 = s.intern();
+
+        System.out.println(s1 == s); // false
+        System.out.println(s1 == s.intern()); // true
+    }
+}
+
+-------------------------------------------
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        StringBuilder s = new StringBuilder("ABCD");
+        s.replace(s.indexOf("B"), s.indexOf("C"), "Q");
+
+        System.out.println(s);
+    }
+}
+
+----------------------------------------
+10-42 note:
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import static java.time.DayOfWeek.*;
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        var today = LocalDate.now().with(TUESDAY).getDayOfWeek();
+
+        System.out.println(today); // it will print TUESDAY
+    }
+}
+
+
+----------------------------------------
+
+10-43 note:
+Which  set  of  commands  is  necessary  to  create  and  run  a  custom  runtime  image  from  Java  source files?
+
+ javac, jlin
+
+--------------------------------------------
+
+10-50 note:
+Which command line runs the main class com.acme.Main from the module com.example?
+
+java -classpath com.example.jar –m com.example/com.acme.Main
+
+-------------------------------------------
+
+10-53 note:
+
+
+import java.io.File;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import static java.time.DayOfWeek.*;
+
+public class Test {
+
+    public static void checkFile(String fileName) {
+        File f = new File(fileName); // key take note here
+        // is that u can use File without wrapping it in try - catch....
+
+        if (!f.exists())
+            throw new Error("file not found");
+    }
+
+    public static void main(String[] args) {
+        checkFile("app.config");
+        System.out.println("loaded config successfully...");
+    }
+}
+
+------------------------------------
+
+11-1 note:
+just notice the output...
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
+class Foo {
+    public void foo(Collection collection) {
+        System.out.println("bonjour le monde!");
+    }
+}
+
+class Bar extends Foo {
+    public void foo(Collection collection) {
+        System.out.println("hello world");
+    }
+
+    public void foo(List collection) {
+        System.out.println("ola mundo");
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+        Foo f1 = new Foo();
+        Foo f2 = new Bar();
+        Bar b1 = new Bar();
+
+        Collection<String> c = new ArrayList<>();
+
+        f1.foo(c);
+        b1.foo(c);
+        f2.foo(c);
+        b1.foo(c);
+    }
+}
+
+---------------------------
+
+11-2 note:
+
+just notice the output...
+
+
+class Foo {
+    private void print() {
+        System.out.println("hello from foo");
+    }
+
+    public void foo() {
+        print();
+    }
+}
+
+class Bar extends Foo {
+
+    private void print() {
+        System.out.println("hello from Bar");
+    }
+
+    public void bar() {
+        print();
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+        Bar b = new Bar();
+        b.foo();
+        b.bar();
+    }
+}
+
+-----------------------------
+
+@interface declartion:
+
+The @ symbol denotes an annotation type definition.
+That means it is not really an interface, but rather a new annotation type -- to be used as a function modifier, such as @override.
+
+@interface MyAnnotation {
+    String value();
+
+    String name();
+
+    int age();
+
+    String[] newNames();
+}
+
+@MyAnnotation(
+        value = "123",
+        name = "Jakob",
+        age = 37,
+        newNames = {"Jenkov", "Peterson"})
+class MyClass {
+
+    void test() {
+    }
+}
+
+-----------------------------
+11-18 note:
+
+What does the transitive modifier mean?
+ Only a module that requires the java.se module is permitted to require the java.sql module.
+
+---------------------------------
+
+11-21 note:
+
+import java.util.Collection;
+import java.util.Map;
+
+class X {
+    private Collection collection;
+    public void set(Collection collection){
+        this.collection = collection;
+    }
+}
+
+class Y extends X {
+    public void set(Map<String, String> map) {
+        //set(map); // compiler error
+        //set(map.values());  // OKAY
+        //super.set(map.values()); // OKAY
+    }
+}
+
+--------------------------------------
+
+11-27 note:
+
+public class Test {
+
+    public static void main(String[] args) {
+        String s = "";
+
+        if (Double.parseDouble("11.00f") >= 11) {
+            System.out.println("double parse...");
+        }
+
+        if (1_7 == Integer.valueOf("17")) {
+            System.out.println("integer.parse....");
+        }
+
+        if (1024 > 1023L) {
+            s += 3;
+        }
+        System.out.println(s);
+    }
+}
+
+----------------------------------
+11-42 note:
+
+In Java 8, BinaryOperator is a functional interface and it extends BiFunction .
+The BinaryOperator takes two arguments of the same type and returns a result of the same type of its arguments.
+The BiFunction takes two arguments of any type, and returns a result of any type.
+
+---------------------------------
+
+11-45 note:
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.Map;
+
+
+public class Test {
+
+    public static void main(String[] args) {
+        try {
+            Path path = Paths.get("/fd/f//dffd");
+            boolean result = Files.deleteIfExists(path);
+            if (result)
+                System.out.println("deleted");
+            else
+                System.out.println("not found...");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+}
+
+----------------------------------
+11-46 note:
+
+Which code fragment does a service use to load the service provider with a Print interface?
+
+private java.util.ServiceLoader loader = ServiceLoader.load (Print.class);
+
+---------------------------------------
+
+11-48 note:
+
+class A {
+    int x = 0;
+
+    A(int x) {
+        this.x = x;
+    }
+
+    public void printA() {
+        System.out.println("A");
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+        List list = List.of(new A(10), new A(20), new A(30), new A(40));
+        Stream<A> s = list.stream();
+        s.filter(l -> l.x > 10)// notice that we need to cast l to A, or make Stream as Stream<A>
+                .forEach(System.out::println);
+    }
+}
+
+--------------------------------
+
+11-49 note:
+note: use forEachOrdered with parallel stream....
+the 2nd line will be always same output....
+Stream.of("AAA","BBB","CCC").parallel().forEach(s->System.out.println("Output:"+s));
+Stream.of("AAA","BBB","CCC").parallel().forEachOrdered(s->System.out.println("Output:"+s));
+
+--------------------------------
+

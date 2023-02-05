@@ -1,0 +1,637 @@
+############################# Stream API #########################
+
+its query language mechanism against collection of data,
+u no longer have to write for loops and sorting and do aggregation.
+
+transaction -> filter   ->    sorted      ->    map       -> collect
+               Predicate      Comparator        Function
+
+## Note:
+collection is a storage mechanism, stream is not, its just a pipeline to pipe your data collection
+
+## Note:
+Addition to stream, there are version of Stream for primitive:
+IntStream, LongStream, DoubleStream
+
+## Note:
+There are two type of operation on stream, intermediate operations and terminal operations.
+Streams are lazy, meaning the computation on the source data is only performed when the terminal operation is initiated.
+stream pipelines consists of:
+  - source.
+  - zero to many intermediate operations.
+  - one terminal operation.
+  - nothing will even happened on stream without an invocation of terminal operation,
+    once the terminal operation completed, the stream is closed and u cannot do anything else with it.
+  - any operation that attempts to use stream after terminal operation will result in an ILLegalStateException
+
+# Note:
+Terminal operations listed below:
+Search:
+   allMatch, anyMatch, FindAny, FindFirst, noneMatch.
+Transform:
+   collect, toArray
+Reduction:
+   count, max, min, reduce.
+Process:
+   forEach, forEachOrdered.
+
+
+***** Example of declaring stream:
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Stream.empty() creates empty Stream
+        Stream<String> argsStream = Stream.empty();
+
+        // Stream.of() creates Stream of elements passed
+        Stream<String> stringStream = Stream.of("First", "Second", "Third");
+
+        // Stream.ofNullable (if value passed null, empty Stream, otherwise
+        // Stream of one element
+        String argumentString =
+                (args != null && args.length > 0) ? args[0] : null;
+        Stream<String> argStream = Stream.ofNullable(argumentString);
+
+        System.out.println("\n----Infinite Stream created by " +
+                "Supplier limited to 10 ");
+
+        // Stream.generate takes a Supplier to generate a stream
+        Stream<Double> infinitelyRandom = Stream.generate(Math::random);
+        infinitelyRandom.limit(10).forEach((t) ->
+                System.out.print(String.format("%.4f  ", t)));
+
+        System.out.println("\n----Streams can be created from " +
+                "Collection implementing types ");
+        // Collection interface has method stream() so List, Set, Queue all
+        // can produce a stream..
+        List<String> l = new ArrayList<>(List.of("First", "Second", "Third"));
+        Stream<String> listStream = l.stream();
+        listStream.forEach(System.out::println);
+
+        // Stream.iterate introduced in Java 9
+
+        // Create a stream with a Unary Operator based lambda expression
+        // numbers 5, 10, 15, 20, infinite stream
+        Stream<Integer> infiniteStream = Stream.iterate(5, (t) -> t + 5);
+
+        System.out.println("\n----Infinite Stream created by " +
+                "UnaryOperator limited to 10 ");
+        // Limiting an Infinite Stream in the pipeline
+        infiniteStream.limit(10).forEach((t) -> System.out.print(t + " "));
+
+        System.out.println("\n---- Finite Stream created by " +
+                "UnaryOperator limited to <= 100  ");
+        // Stops at 100, uses lambda expression Predicate
+        Stream<Integer> finiteStream = Stream.iterate(5, (t) -> t <= 100,
+                (t) -> t + 5);
+
+        finiteStream.forEach((t) -> System.out.print(t + " "));
+
+        // Stream.concat
+        for (String arg : args) {
+
+            Stream<String> inputStream = Stream.of(arg.split("\\s"));
+
+            // Concat each stream to argsStream (created initially as
+            // an empty stream).  Result is combined stream of elements
+            argsStream = Stream.concat(argsStream, inputStream);
+        }
+
+        System.out.println("\n---- Stream of words from concatenated streams");
+        argsStream.forEach(System.out::println);
+
+        Stream.Builder<String> wordStreamBuilder = Stream.<String>builder();
+        for (String arg : args) {
+            for (String s : arg.split("\\s")) {
+                wordStreamBuilder.accept(s);
+            }
+        }
+        Stream<String> wordStream = wordStreamBuilder.build();
+        System.out.println("\n---- Stream of words using Stream.Builder");
+        wordStream.forEach(System.out::println);
+
+    }
+}
+
+# Note:
+The intermediate operations fall in two categories:
+1- stateless:
+  such as filter and map, and retain no state from one element to next.
+2- stateful:
+  such as distinct and sorted, takeWhile and can maintain some state.
+
+Example about using stream after closing it:
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Stream;
+
+// Create a Person class to be used in a Stream pipeline
+class Person {
+    private String name;
+
+    // Constructor
+    Person(String name) {
+//        System.out.println("Instantiating " + name);
+        this.name = name;
+    }
+
+    // Getter
+    public String getName() {
+        return this.name;
+    }
+
+    public String toString() {
+        return " [" + this.name + "]";
+    }
+}
+
+public class Test {
+
+    // Method to  randomly create a Person Object
+    private static Person getNewPerson() {
+        String[] names = {"Mary", "Jim", "Joe", "Aaron"};
+        int i = new Random().nextInt(4);
+        return new Person(names[i]);
+    }
+
+    public static void main(String[] args) {
+
+        // Create a list of 20 randomly generated persons.
+        List<Person> personList = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            personList.add(getNewPerson());
+        }
+
+        // Chained pipeline
+        long jimCount = personList.stream()
+                .filter((s) -> s.getName().equals("Jim"))
+                .count();
+        System.out.println("Randomly generated number of Jim Persons: " +
+                jimCount + "/20");
+
+        // Pipeline operations not chained
+        Stream<Person> personsStream = personList.stream();
+        personsStream = personsStream.filter(
+                (s) -> s.getName().equals("Mary"));
+        long maryCount = personsStream.count();
+        System.out.print("Randomly generated number of Mary Persons: " +
+                maryCount+ "/20");
+
+        // u cant use stream after it has being closed....
+        personsStream.forEach(System.out::println); // java.lang.IllegalStateException stream has already been operated upon or closed
+
+        System.out.println("\n---- Creating another personStream variable ----");
+        // Declaring Stream using generate with Supplier lambda expression
+        Stream<Person> personStreamNext =
+                Stream.generate(() -> getNewPerson());
+
+        // this is short-circuiting example, Stream.generate will keep generating unlimited until it anyMatch condition success
+        System.out.println("Matched on Aaron on an infinite Stream = "+
+                personStreamNext.anyMatch(
+                        (s)-> s.getName().equals("Aaron")));
+
+
+    }
+
+}
+
+----------------------------------------------------
+########## Method reference:
+
+example below:
+
+import java.util.Arrays;
+import java.util.function.BinaryOperator;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create array of names for testing
+        String[] namesArray = {"Allen", "Bob", "Caleb", "Don", "Fred",
+                "Greg", "Howard", "Ira", "James", "Kevin"};
+
+        Predicate<String> predicate = (s) -> s.length() > 3;
+
+        System.out.println("filter and count example: (length > 3 and" +
+                " length < 6 : " +
+                // Arrays static method will turn array into a stream..
+                Arrays.stream(namesArray)
+                        // filter uses a Predicate [ boolean test(T) ]
+                        .filter(predicate) // we can use this or method reference as below
+                        //.filter(Test::predicate)
+                        // You can add as many filters as you wish
+                        .filter((s) -> s.length() < 6)
+                        // count returns a long, in this case a count of
+                        // elements that met the criteria
+                        .count());
+
+        System.out.println("dropWhile Example: Drop names until Howard: " +
+                Arrays.stream(namesArray)
+                        // dropWhile uses a Predicate and drops values until
+                        // predicate becomes true
+                        .dropWhile(s -> !s.equals("Howard"))
+                        // collect method returns results in the type
+                        // requested, here as List
+                        .collect(Collectors.toList()));
+
+        System.out.println("takeWhile Example: Add names until Howard: " +
+                Arrays.stream(namesArray)
+                        // takeWhile uses a Predicate and includes values until
+                        // predicate becomes true
+                        .takeWhile(s -> !s.equals("Howard"))
+                        // collect method returns results as List
+                        .collect(Collectors.toList()));
+
+        System.out.println("skip Example: skip first two names: " +
+                Arrays.stream(namesArray)
+                        // skip first 2 elements
+                        .skip(2)
+                        // collect method returns results as List
+                        .collect(Collectors.toList()));
+
+        System.out.println("reduce example: Sum of the numbers = " +
+                Stream.iterate(5, (t) -> t <= 100, (t) -> t + 5)
+                        // Example of BinaryOperator, a represents the sum
+                        // b here represents value being added to sum
+                        //.reduce(new Test()::sum).get()); // can be like this or use as static method reference
+                        .reduce(Test::sum).get());
+
+        // NOTE:                         /********************* TRICKY *********************/
+        // binary operator require both input and input MUST be same and in lambda its not forgiving to replace one of the param and make it int
+        BinaryOperator<Integer> binaryOperator = (Integer a, Integer b) -> a + b;
+        // for example the below code will show compiler error , but in method reference its more forgiving, and as we can see in method Test::sum we
+        // have one as int and one as Integer and its okay
+        BinaryOperator<Integer> binaryOperator = (int a, Integer b) -> a + b;
+
+
+    }
+
+    //    private  int sum(int a, Integer b) {
+//        return a + b;
+//    }
+//
+    private static int sum(int a, Integer b) {
+        return a + b;
+    }
+
+    private static boolean predicate(String s) {
+        return s.length() > 3;
+    }
+}
+
+NOTE:
+There are 4 types on method reference:
+1- static method:
+   ContainingClass::staticMethodName
+2- instance method on object:
+   containingObject::instanceMethodName
+3- Instant Method on an arbitrary object of particular type:
+   ContainingType::methodName
+4- Reference to a constructor
+   ClassName::new
+
+example below:
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 7: Stream API
+Topic:  Method References
+*/
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Random;
+import java.util.stream.Stream;
+
+class TestPerson {
+
+    // Private attributes...
+    public static String[] namesArray = {"Allen", "Bob", "Caleb", "Don", "Fred",
+            "Greg", "Howard", "Ira", "James", "Kevin", "Allen2"};
+    private String name;
+
+    // initializer give name at random
+    {
+        int i = new Random().nextInt(10);
+        this.name = namesArray[i];
+    }
+
+    public String toString() {
+        return this.name + " ";
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
+    // Will use this method in a method reference
+    public static void printStatic(String s) {
+        System.out.print(s + " ");
+    }
+
+    // Will use this method in a method reference
+    public void printInstance(String s) {
+        System.out.print(s + ", ");
+    }
+}
+
+public class Test {
+
+    public static String TestExternalMethodNotArbitrary(String s) {
+        return s.toUpperCase(Locale.ROOT);
+    }
+
+    public static void main(String[] args) {
+
+        // Method reference used to print each name
+        Arrays.stream(TestPerson.namesArray)
+                .forEach(System.out::println);
+
+        System.out.println("------ Four types of Method References ------");
+        System.out.println("Static Method on a class: ");
+        Arrays.stream(TestPerson.namesArray)
+                .forEach(TestPerson::printStatic); // important note:
+        /****
+         * when u pass a method reference as aparameter to a method argument defined by a functional interface (in the above case its Consumer interface).
+         * the method MUST have the same signature and return type as functional interface...
+         *
+         * **********/
+
+        System.out.println("\nInstance Method on an object: ");
+        Arrays.stream(TestPerson.namesArray)
+                .map(String::toString) // arbitrary method..... (bcoz our source is String and we can use methods from String class)
+                .map(Test::TestExternalMethodNotArbitrary) // method static reference, notice here the class is Test and its different from the source (which is string)
+                                                           // NOTE the method reference here must match Function interface method signature and return type.....
+                .forEach(new TestPerson()::printInstance);
+
+        Arrays.stream(new TestPerson[]{new TestPerson(), new TestPerson(), new TestPerson()})
+                .map(TestPerson::getName)
+                .forEach(TestPerson::printStatic);
+
+        System.out.println("\nInstance Method on an arbitrary object: ");
+        // Note that compareToIgnoreCase is not static method
+        Arrays.sort(TestPerson.namesArray, String::compareToIgnoreCase);
+        System.out.println("after sorting: " + Arrays.toString(TestPerson.namesArray));
+
+        System.out.println("\nReference to Constructor: ");
+        Stream.generate(TestPerson::new)  // Infinite stream
+                .limit(15)                // Limit to 15
+                .sorted((s, t) -> s.getName().compareToIgnoreCase(t.getName()))
+                .forEach(System.out::print);
+
+    }
+
+    public static int compareToIgnoreCase(String str) {
+        return 1;
+    }
+}
+
+another example for method references:
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 7: Stream API
+Topic:  Method References and Lambda Expressions
+*/
+
+import java.util.Locale;
+
+// Simple Functional Interface
+interface MyInterface {
+
+    String doSomething(String s);
+}
+
+// Class implements Functional Interface
+class MyClass implements MyInterface {
+
+    public String doSomething(String s) {
+        return "3.  MyClass " + s;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create local variable, assign lambda expression to it
+        MyInterface i = (s) -> "1.  variable " + s;
+
+        // Executing operation passing Interface parameter
+        executeInterface(i);
+
+        // Executing operation passing lambda expression directly
+        executeInterface((s) -> "2.  unnamed " + s);
+
+        // Executing operation passing method reference
+        executeInterface(new MyClass()::doSomething);
+
+        // Executing operation passing return value (interface) of
+        // another method
+        executeInterface(Test.returnInterface());
+        //executeInterface(Test::returnInterface); // compiler error bcoz the method signature does not match String doSomething(String s);
+        executeInterface(Test::returnInterface2); // this one okay bcoz it match the method signature for  doSomething(String s);
+
+    }
+
+    // Example operation that accepts functional interface as argument
+    private static void executeInterface(MyInterface i) {
+        System.out.println(i.doSomething("hello"));
+    }
+
+    // Returns an interface.
+    private static MyInterface returnInterface() {
+        MyInterface i = (s) -> "4.  method " + s;
+        return i;
+    }
+
+    private static String returnInterface2(String s) {
+        return s.toUpperCase(Locale.ROOT);
+    }
+}
+
+
+-----------------------------------
+
+Stream.Builder,
+1- once u build the stream u cant add items anymore...              /************ TRICKY **********/
+
+example about Stream.builder
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 7: Java Stream API
+Topic:  Stream.Builder
+*/
+
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Builder is mutable object, so like a StringBuilder,
+        // you do not need to self reference, but you can...
+        Stream.Builder<String> builder = Stream.builder();
+        builder = builder.add("a");  // ok but not necessary
+        builder.add("b");  // this works
+        builder.add("c");
+
+        Stream<String> stream = builder.build();
+        stream.forEach(System.out::println);
+        // stream.count(); // compiler error, stream already been closed.
+        // builder.add("d"); // java.lang.IllegalStateException , u cant add item after build() executed.
+
+        // Using a raw Builder with chained methods
+//        Stream.builder().add("a").add(10).build().forEach(
+//                System.out::println);
+
+        // Typing builder() method returns correctly typed Stream
+        Stream.<String>builder().add("a").add("b").build().forEach(
+                System.out::println);
+
+        Stream.Builder builder3 = Stream.<String>builder();
+        builder3.add("a");
+        builder3.add(new Object());
+        Stream<String> s3 = builder3.build(); // java.lang.ClassCastException bcoz we have added Object then try to cast it string.
+        s3.forEach(System.out::println);
+    }
+}
+
+2- Example about stream limit:
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create a Stream of Integer
+        Stream<Integer> stream = Stream.of(10, 20, 30);
+        stream.limit(2); // java.lang.IllegalStateException: stream has already been operated upon or closed
+        stream = stream.limit(2); // this is OKAY
+        stream.forEach(System.out::println);
+    }
+}
+
+----------------------------
+###### Concat
+concat method operates on the two input streams and binds each stream to its source,
+As a result subsequent modifications to an input stream source may not be reflected in the concatenated stream result.
+
+example below:
+
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Stream;
+
+/**********
+ * Concat method both param should be still open and not terminated
+ * Stream.concat(stream1 , stream2); // both stream1 and stream should not call any terminal operation before the concat,
+ *                                   // otherwise will show a java.lang.IllegalStateException: stream has already been operated upon or closed
+ *
+ *
+ *         Stream<String> merged = Stream.concat(stream1, stream2); // This is okay
+ *         Stream<String> newMerge = Stream.concat(stream1, stream2); // this will show ava.lang.IllegalStateException: stream has already been operated upon or closed
+ *                                                                    // bcoz u r already processing stream1 and stream2 in merged stream....
+ *
+ *         tree1.add("Zoe"); // adding item to source after merge concat
+ *
+ *         merged.forEach(System.out::println); // it will throw concurrent modification exception
+ *
+ * ****************/
+public class Test {
+    public static void main(String[] args) {
+
+        // Set up some test data
+        Set tree1 = new TreeSet(List.of("Ralph", "Larry", "Carol", "Mark"));
+        Set tree2 = new TreeSet(List.of("Mark", "Mary", "Maggie"));
+
+        // Print each set's elements
+        System.out.println("TreeSet orders naturally, " +
+                "print using Set.forEach --");
+        System.out.println("---First---");
+        tree1.forEach(System.out::println);
+        System.out.println("---Second---");
+        tree2.forEach(System.out::println);
+
+        System.out.println("TreeSet orders naturally, " +
+                "print using stream().forEach() --");
+
+        // Create streams for each Set, print each stream's elements
+//        Stream<String> stream1 = tree1.stream();
+//        stream1 = stream1.sorted(Comparator.reverseOrder());
+
+//        System.out.println("---First---");
+//        stream1.forEach(System.out::println);
+
+//        Stream<String> stream2 = tree2.stream();
+//        stream2 = stream2.filter(s-> s.charAt(s.length()-1) != 'y');
+
+        Stream<String> stream1 = tree1.stream();
+        stream1 = stream1.peek(s -> System.out.print("-- 1 -- "));
+
+        Stream<String> stream2 = tree2.stream();
+        stream2 = stream2.peek(s -> System.out.print("-- 2 -- "));
+
+//        System.out.println("---Second---");
+//        stream2.forEach(System.out::println);
+
+        System.out.println("---Merged---");
+        Stream<String> merged = Stream.concat(stream1, stream2);
+//        merged.forEach(System.out::println);
+
+//        merged.distinct().forEach(System.out::println);
+//
+        Stream<String> newMerge = Stream.concat(stream1, stream2);
+
+        merged = merged.distinct();
+
+//        Stream<String> newMerge = Stream.concat(stream1, Stream.of("Zoe", "Pete"));
+
+//        stream1 = stream1.sorted(Comparator.reverseOrder());
+
+        tree1.add("Zoe");
+
+        merged.forEach(System.out::println);
+    }
+}
+
+------------------------------------------
+Tricky question:
+
+public class Test {
+    public static void main(String[] args) {
+        new Test().useStream(10);
+    }
+
+    private void useStream(int index) {
+        List<Integer> intList = new ArrayList<>(List.of(10, 20));
+        intList.stream()
+                .map(s -> s + index);  // Line 1
+
+        intList.stream()
+                .sorted(Comparator.reverseOrder()); // Line 2
+
+        intList.stream()
+                .forEach(System.out::print);
+
+    }
+}
+
+output is 1020
+The first two statements are never executed (no terminal operation was ever invoked) and even if they were,
+the streams these intermediate operations were invoked on are not the same stream as the last statement,
+so the output is simplly the initial elements in the list printed out.

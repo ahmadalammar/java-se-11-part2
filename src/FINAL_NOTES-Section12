@@ -1,0 +1,209 @@
+1- calling interrupt() will only interrupt those thread that in sleep or wait status...
+
+2- ExecutorService does not implement AutoCloseable, and cant use is as an argument
+   to try-with-resource.                          /****************** TRICKY *****************/
+
+3- ############ execute vs submit
+   return type of submit is FutureTask
+   while return type of execute is void
+
+4- submit overload methods:
+   1- Future<?> submit(Runnable task)
+   2- <T> Future<T> submit(Runnable task, T result)
+   3- <T> Future<T> submit(Callable<T> task).
+
+example below about submit overloaded methods:
+
+
+import java.util.Random;
+import java.util.concurrent.*;
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        ExecutorService executorService = null;
+
+        try {
+            executorService = Executors.newSingleThreadExecutor();
+
+            /********** Future<?> submit(Runnable task) *************/
+            // Submits Runnable and returns void
+            Future<?> firstResult = executorService.submit(
+                    () -> new Random().ints(1, 1000)
+                            .limit(5)
+                            .forEach(System.out::println));
+
+            // Allow thread to complete before proceeding using while loop
+            //  and checking Future.isDone() method.  Polling.
+            while (!firstResult.isDone()) {
+                Thread.sleep(250);
+            }
+
+            // Future.get() returns a null with single argument and
+            // Runnable is first argument
+            System.out.println("firstResult = " + firstResult);
+            System.out.println("firstResult.get() = " + firstResult.get()); // run() in runnable return void, so here firstResult.get() it will just return null
+
+            /********** <T> Future<T> submit(Runnable task, T result) *************/
+            // Submits Runnable and returns second argument as the result
+            Future<String> secondResult = executorService.submit(
+                    () -> new Random().ints(1, 1000)
+                            .limit(5)
+                            .forEach(System.out::println)
+                    , "Thread is finished");
+
+            // Allow thread to complete before proceeding using while loop
+            //  and checking Future.isDone() method
+            while (!secondResult.isDone()) {
+                Thread.sleep(250);
+            }
+
+            // Future.get() returns the second argument when
+            // two arguments passed to submit method
+            System.out.println("secondResult = " + secondResult);
+            System.out.println("secondResult = " + secondResult.get()); // it will return "Thread is finished"
+
+
+            /********** <T> Future<T> submit(Callable<T> task) *************/
+            // Submits a Callable that returns a value,               /*************** TRICKY **************/
+            // value is passed to the Future
+            // callable return a value, runnable does not return a value....
+            Future<?> thirdResult = executorService.submit(
+                    () -> new Random().ints(1, 100_000)
+                            .limit(1000)
+                            .summaryStatistics()
+            );
+
+            // Replace while loop with Future.get() method passing specified (we can use loop method or Future.get() method to wait until result finishs....)
+            // time.
+            // u must handle TimeoutException here bcoz u r using thirdResult.get(5, TimeUnit.SECONDS) which throw a checked exception     /************* TRICKY ************/
+            System.out.println("thirdResult = " + thirdResult.get(5, TimeUnit.SECONDS)); // it wait for seconds to get results, if not finish within 5 seconds then it will throw TimeoutException
+            System.out.println("thirdResult = " + thirdResult);
+
+        } catch (TimeoutException | InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            if (executorService != null) executorService.shutdown();
+        }
+
+    }
+}
+
+
+5- example about invokeAll: (it throws InterruptedException and u must handle that exception ....)
+   List<Future<IntSummaryStatistics>> results = null;
+
+    try {    // it must be wrapped in try-catch
+               executorService = Executors.newFixedThreadPool(2);
+
+               // Pass all tasks to ExecutorService
+               results = executorService.invokeAll(tasks, 2, TimeUnit.SECONDS); // here it will wait for 2 seconds and cancel unfinished task....
+               // after execution u will see that some taks status is canceled, and it will throw ava.util.concurrent.CancellationException when u try to get value...    /********** TRICKY *******/
+               System.out.println("finished invocation...."); // invokeAll will execute and wait until execution finish, unlike execute and submit which is execute and move-on....
+
+           } catch (InterruptedException e) {
+               e.printStackTrace();
+           } finally {
+
+                     // Print out results of each task
+                     for (Future<IntSummaryStatistics> f : results) {
+                         System.out.println(f);
+                     System.out.println(f.get()); // it will throw ava.util.concurrent.CancellationException if task is canceled....        /******** TRICKY ***********/
+                 }
+           }
+
+6- example about invokeAny : it throw InterruptedException and TimeoutException
+
+     try {
+            poolService = Executors.newCachedThreadPool();
+
+            //IntSummaryStatistics result = poolService.invokeAny(tasks); // this invokeAny will wait until task finish (blocking).. then it will only move to other statements...
+            // Note: poolService.invokeAny(tasks, 1, TimeUnit.SECONDS) throws a checked exception TimeoutException so u must handle it in catch.. otherwise, its a compiler error...
+            IntSummaryStatistics result = poolService.invokeAny(tasks, 1, TimeUnit.SECONDS); // this invokeAny it will wait 1 second, if task not then it will throw  TimeoutException
+            System.out.println("------ Result from InvokeAny------ ");
+            if (result != null) {
+                System.out.println(result);
+            }
+            System.out.println("---------------------------------- ");
+
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        } finally {
+            if (poolService != null) {
+                poolService.shutdown();
+            }
+        }
+
+7- // NOTE:                   /********* TRICKY *********//
+    - in .invokeAny(tasks, 1, TimeUnit.SECONDS); if tasks did not finish within 1 second, then it will throw TimeoutException
+       and it throw a TimeoutException and u must handle it in catch...
+    - in .invokeAll(tasks, 2, TimeUnit.MILLISECONDS); it WONT throw a TimeoutException if task did not finish within 2 seconds,
+       it will just continue the execution, but the task statuses will be canceled....
+
+8- Note:
+   - scheduleWithFixedDelay:
+     the subsequent task is scheduled when the previous task finished,
+     regardless of how long the previous task took,
+   - scheduleAtFixedRated:
+     schedule the subsequent task at the same fixed interval.
+     if the previous task isnt done, the next task start executing if a scheduled
+     thread is being used or queues up if a single threaded executor is used or there are
+     not enough thread in the pool.
+
+-------------------------------------------
+####### Cyclic Barrier
+
+allows set number of threads to all wait for each other at
+defined barrier point, u can think of this as your common checkpoint for threads
+before they proceed to the next stage in the operation.
+
+        /*********
+         * Note:
+         * 1- if number of thread in newFixedThreadPool(2) <  CyclicBarrier parties ( CyclicBarrier(4))
+         *    - then cyclicBarrier.await() will hang forever and produce deadlock issue,
+         *      bcoz its waiting for 4 threads, but only 2 executed..
+         *    - we can overcome the above issue by defining timeout cyclicBarrier.await(5, TimeUnit.SECONDS);
+         *      so after cyclicBarrier wait for 5 seconds then it will throw exception BrokenBarrierException
+         *      and continue the program.
+         *
+         * **********/
+
+--------------------------------------------------
+######### Thread safe code
+
+- u cannot use synchronized modifier for constructors      /********** TRICKY *************/
+- synchronized will acquires the intrinsic lock for the method object,
+  and releases it method method return.
+  the lock release occurs even if the return was caused by uncaught exception.
+
+- u can also wrap a shared object in a synchronized statement.
+- u cn also use volatile modifier on specific fields where u want to ensure safe access by multiple threads.
+- if your attribute is a member of collections framework:
+  - get a synchronized wrapper on collection.
+  - used a java.util.concurrent class instead.
+
+- if your attribute is double or long, then the updates of these types are not atomic.
+  atomic means an updated occurs in a single operation. a single write to a non-volatile long or double
+  value is treated as two separate writes: one to each 32-bit half...
+  This can result in a situation where a thread sees the first 32 bits of a 64-bit value from the write,
+  and the second 32 bits from another write
+
+- java provide java.util.concurrent.atomic classes to support lock-free thread-safe on single variables.
+--------------------------------------------------
+############ Race Condition
+
+its when two thread will try to put same new value (player) in the map
+
+the ways to verify if u have a race condition:
+in the above example we have addHits method and inside this method
+we will modify it :
+
+        if (players.containsKey(player)) {
+            players.computeIfPresent(player, (key, val) -> ++val);
+        } else {
+            if (players.putIfAbsent(player, 1) != null) { // here it means other thread already put the value in map while the first thread was attempting to put the value....
+               System.out.println("Encountered race condition....")
+            }
+        }
+

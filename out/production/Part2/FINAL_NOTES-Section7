@@ -1,0 +1,248 @@
+############################# Built-In Functional Interfaces #########################
+1- Consumer:
+   method name: accept
+   description: accepts one or two args and returns void.
+   void accept(T)
+
+   - BiConsumer<T, U>:
+     void accept(T, U) accept 2 args and returns no results.
+
+   - Consumer DOES NOT have compose method, it only has andThen.
+
+example below:
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // BiConsumer variable has two arguments, List and Consumer ...
+        BiConsumer<List<String>, Consumer<String>> bi = (s, t) -> s.forEach(t);
+
+        // Create a second BiConsumer variable to demonstrate andThen...
+        BiConsumer<List<String>, Consumer<String>> biConsumerAndThen =
+                (s, t) -> s.forEach(System.out::print);
+
+        // Executing andThen on it's own does nothing
+        System.out.println("\n--- Executing just BiConsumer.andThen ---");
+        // NOTE: here u must assign it back to same variable , otherwise it wont be invoked...            /************ TRICKY ************/
+        //bi = bi.andThen(biConsumerAndThen);
+
+        // or u can use like below code without self invocation...
+//        bi.andThen(biConsumerAndThen).accept( List.of("One", "Ten", "Twelve", "Three", "Four"),
+//                (s) -> System.out.println("\t" + s));
+
+        bi.accept(
+                List.of("One", "Ten", "Twelve", "Three", "Four"),
+                (s) -> System.out.println("\t" + s));
+
+    }
+}
+
+2- Function:
+   method name: apply
+   description: accept one or more args and the return type does not have to be related to param type.
+   - Function<T,R>
+     R apply(T)
+
+     it has 2 default methods:
+     1- compose.
+     2- andThen
+
+   - BiFunction<<T,U,R>:
+     R apply(T,U)
+
+example below:
+
+import java.util.List;
+import java.util.function.Function;
+
+public class Test {
+    public static void main(String[] args) {
+
+        int i = 0;
+        // First, sublist
+        Function<List<Integer>, List<Integer>> fPre =
+                (s) -> {
+                    System.out.println("fPre executed");
+                    return s.subList(1, 4);
+                };
+
+        // Second, make it a String - main function
+        Function<List<Integer>, String> fResult =
+                (s) -> {
+                    //i++; // cant change local variable value in lambda
+                    System.out.println("fResult executed");
+                    return s.toString();
+                };
+
+        // After its a String, replace comma with space
+        Function<String, String> fPost =
+                (s) -> {
+                    System.out.println("fPost executed");
+                    return s.replace(',', ' ');
+                };
+
+        // Executing by chaining Function local variables...
+        System.out.println("fResult.compose(fPre).andThen(fPost).apply = " +
+                fResult.compose(fPre).andThen(fPost).
+                        apply(List.of(10, 20, 30, 40, 50)));
+
+        // order is not important, u can put andThen before compose, still okay,,,
+        // Executing by chaining Function local variables...
+        System.out.println("fResult.compose(fPre).andThen(fPost).apply = " +
+                fResult.andThen(fPost).compose(fPre).
+                        apply(List.of(10, 20, 30, 40, 50)));
+    }
+}
+
+3- Operator:
+   method name: apply
+   description: its extension of Function interface except the type of args
+   must match with the return type.
+
+   - UnaryOperator:
+      T apply(T): operation on single operand and result should be same type as its operand.
+   - BinaryOperator:
+      T apply(T, T): operation on two operands and result should be same type as its operand.
+      it has two static methods : minBy, maxBy
+
+4- Predicate:
+   method name: test
+   description: represent boolean based function
+   boolean test(T) // notice
+
+   predicate has the following default methods:
+   - Predicate<T> and(Predicate<? super T> other)
+   - Predicate<T> negate()
+   - Predicate<T> or(Predicate<? super T> other)
+
+   and has the following static methods:
+   <T> Predicate<T> isEqual(Object targetRef)
+   <T> Predicate<T> not(Predicate<? super T> target)
+
+   - BiPredicate<T,U>:
+     boolean test(T, U) accept 2 args and return boolean
+
+   Note:
+   1- Predicate<Boolean> b3 = b -> b;
+      b3.test(null); // it will throw NPE bcoz test return primitive null....
+   2- if the firstTest test result was false then it will not evaluate secondTest....
+      firstTest.and(secondTest).test(-11));
+   3- if the firstTest test result was true then it will not evalute the secondTest....
+      firstTest.or(secondTest).test(0)
+
+5- Supplier:
+   method name: get
+   description: a supplier of results, take no args.
+   T get()
+
+6- both UnaryOperator and BinaryOperator have two default method (coming from Function and BiFunction):
+     - compose
+     - andThen
+
+------------------------------------------------
+very tricky question:
+
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.*;
+
+// Item class
+class Item {
+    String sku;
+    String description;
+
+    // No args constructor
+    Item() {
+        sku = "#AAAA";
+        description = "unknown";
+    }
+
+    // Single args constructor
+    Item(String sku) {
+        this.sku = sku;
+        description = "unknown";
+    }
+
+    // Multiple args constructor
+    Item(String sku, String description) {
+        this.sku = sku;
+        this.description = description;
+    }
+
+    // Clone method
+    public Item clone() {
+        String firstPart = this.sku.split("-")[0];
+        return new Item(firstPart + "-0001", "cloned");
+    }
+
+    // toString method
+    public String toString() {
+        return "Item{" +
+                "sku='" + sku + '\'' +
+                ", description='" + description + '\'' +
+                '}';
+    }
+}
+
+// Class which uses many built-in interface to do basically the
+// same thing, create a new Item object ..
+public class Test {
+    public static void main(String[] args) {
+
+
+        // Consumer & Lambda Expression
+        Consumer<List> s6 = s -> s.add(new Item("#EEEE-0000", "e Product")); // its okay that add method return boolean to a consumer...
+
+        // Predicate & Lambda Expression
+        Predicate<List> s7 = s -> s.add(new Item("#FFFF-0000", "f Product"));
+
+        // Create a new List of Item
+        List<Item> list = new ArrayList<>();
+
+        // Executing methods with built-in interface arguments
+        createAndAddItem(list, s6);
+        createAndAddItem(list, s7);
+
+        // below will show compiler error 'Ambiguous method call. Both' as we have two methods with same potential consumer.           /************** TRICKY **************/
+        createAndAddItem(list,
+                s -> s.add(new Item("#EEEE-0000", "e Product")));
+
+        // Setting Function and Supplier to the same code..
+        Function<String, Item> function = Item::new;
+        Supplier<Item> supplier = Item::new;
+
+        // Pass method reference to method which accepts Supplier
+//        Item i = createItem("Test", Item::new);
+        // we need casting here to clear Ambiguous error
+        Item i = createItem("Test", (Function<String,Item>) Item::new);                    /************** TRICKY **************/
+        i = createItem("Test", (Supplier<Item>) Item::new);                                /************** TRICKY **************/
+    }
+
+    // Overloaded Method accepts Consumer
+    private static void createAndAddItem(List<Item> l, Consumer<List> c) {
+        c.accept(l);
+    }
+
+    // Overloaded Method accepts Predicate
+    private static void createAndAddItem(List<Item> l, Predicate<List> p) {
+        p.test(l);
+    }
+
+    // Method accepts Supplier which creates a new item with defaults
+    private static Item createItem(String s, Supplier<Item> supplier) {
+        Item i = supplier.get();
+        i.sku = s;
+        return i;
+    }
+
+    // Method accepts Function which creates a new item
+    private static Item createItem(String s,
+                                   Function<String, Item> function) {
+        return function.apply(s);
+    }
+}
+

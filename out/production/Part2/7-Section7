@@ -1,0 +1,764 @@
+############################# Built-In Functional Interfaces #########################
+1- Consumer:
+   method name: accept
+   description: accepts one or two args and returns void.
+   void accept(T)
+
+   - BiConsumer<T, U>:
+     void accept(T, U) accept 2 args and returns no results.
+
+2- Function:
+   method name: apply
+   description: accept one or more args and the return type does not have to be related to param type.
+   - Function<T,R>
+     R apply(T)
+
+   - BiFunction<<T,U,R>:
+     R apply(T,U)
+
+
+3- Operator:
+   method name: apply
+   description: its extension of Function interface except the type of args
+   must match with the return type.
+
+   - UnaryOperator:
+      T apply(T): operation on single operand and result should be same type as its operand.
+   - BinaryOperator:
+      T apply(T, T): operation on two operands and result should be same type as its operand.
+
+4- Predicate:
+   method name: test
+   description: represent boolean based function
+   boolean test(T)
+
+   - BiPredicate<T,U>:
+     boolean test(T, U) accept 2 args and return boolean
+
+5- Supplier:
+   method name: get
+   description: a supplier of results, take no args.
+   T get()
+
+-------------------------------------------------------------------
+############### java.util.Function UnaryOperator and BinaryOperator
+
+public interface UnaryOperator<T> extends Function<T, T> {
+........
+}
+
+public interface BinaryOperator<T> extends BiFunction<T,T,T> {
+  public static <T> BinaryOperator<T> minBy(Comparator<? super T> comparator) {}
+  public static <T> BinaryOperator<T> maxBy(Comparator<? super T> comparator) {}
+}
+
+both UnaryOperator and BinaryOperator have two default method (coming from Function and BiFunction):
+  - compose
+  - andThen
+
+example:
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 6: Built-in Functional Interfaces
+Topic:  UnaryOperator and BinaryOperator
+*/
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
+
+// Custom Unary Operator
+interface MyUnaryOperator<T> {
+    T apply(T t);
+}
+
+// Class that puts Unary Operator interfaces to work
+public class Test {
+    public static void main(String[] args) {
+
+        // Set up some Test data
+        Map<String, Integer[]> map = new TreeMap<>();
+        map.put("John", new Integer[]{31, 35, 50, 36, 40});
+        map.put("Michael", new Integer[]{21, 27, 50, 30, 50});
+        map.put("Laura", new Integer[]{15, 17, 55, 43, 90});
+        map.put("Carol", new Integer[]{21, 30, 43, 31, 55});
+
+        // Declaring lambda expressions using Generic Interfaces
+
+        // UnaryOperator using Integer(accepts one argument of type
+        // Integer and returns a value of type Integer)
+        UnaryOperator<Integer> addFiveToFirst = (s) -> s + 5;
+
+        // Using the interface declared above
+        MyUnaryOperator<Integer> addFiveToFirstAgain = (s) -> s + 5;
+
+        // BinaryOperator using Integer (accepts two arguments of type
+        // Integer and returns a value of type Integer)
+        BinaryOperator<Integer> averageFirstTwo = (s, t) -> (s + t) / 2;
+
+        // Static method on BinaryOperator returns lambda expression
+        // evaluating a max value
+        BinaryOperator<Integer> maxOperator = BinaryOperator.maxBy(
+                Comparator.naturalOrder());
+
+        // Static method on BinaryOperator returns lambda expression
+        // evaluating a max value
+        BinaryOperator<Integer> minOperator = BinaryOperator.minBy(
+                Comparator.naturalOrder());
+
+        Integer[] vals;
+        // Loop through values in a HashMap
+        for (Map.Entry<String, Integer[]> e : map.entrySet()) {
+
+            vals = e.getValue();
+            // Print key information and Integer list
+            System.out.println(e.getKey() + "'s List (" +
+                    Arrays.toString(vals) + ")");
+
+            // Execute the 'apply' method on UnaryOperator
+            System.out.println("\taddFiveToFirst = " +
+                    addFiveToFirst.apply(vals[0]));
+
+            // Execute the 'apply' method on UnaryOperator
+            System.out.println("\taddFiveToFirstAgain = " +
+                    addFiveToFirstAgain.apply(vals[0]));
+
+            // Execute the 'apply' method on BinaryOperator
+            System.out.println("\taverageFirstTwo = " +
+                    averageFirstTwo.apply(vals[0], vals[1]));
+
+            // Execute the 'apply' method on maxOperator
+            System.out.println("\tMax of (" + vals[3] + ", " + vals[4] +
+                    ") = " + maxOperator.apply(vals[3], vals[4]));
+
+            // Execute the 'apply' method on minOperator
+            System.out.println("\tMin of (" + vals[1] + ", " + vals[4] +
+                    ") = " + minOperator.apply(vals[1], vals[4]));
+        }
+    }
+}
+
+-------------------------------------------------------------------
+############### java.util.Function Predicate
+
+public interface Predicate<T> {
+  boolean test (T t);
+}
+
+predicate has the following default methods:
+- Predicate<T> and(Predicate<? super T> other)
+- Predicate<T> negate()
+- Predicate<T> or(Predicate<? super T> other)
+
+and has the following static methods:
+<T> Predicate<T> isEqual(Object targetRef)
+<T> Predicate<T> not(Predicate<? super T> target)
+
+example below:
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 6: Built-in Functional Interfaces
+Topic:  Predicate Example
+*/
+
+import java.util.function.Predicate;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Predicate with Object argument, lambda expression
+        // always returns true.
+        Predicate b1 = s -> true;
+        System.out.println("The value of " +
+                "Predicate [s -> true].test(null) = " + b1.test(null));
+
+        // Predicate with Object argument, lambda expression
+        // returns true if arugment is null
+        Predicate b2 = s -> s == null;
+        System.out.println("The value of " +
+                "Predicate [s -> s == null].test(null) = " + b2.test(null));
+
+        // Predicate typed to Boolean, lambda expression
+        // returns boolean value of the value passed
+        Predicate<Boolean> b3 = b -> b;
+        System.out.println("The value of Predicate [b -> b].test(" +
+                "Boolean.valueOf('true')) = " +
+                b3.test(Boolean.valueOf("true")));
+
+        // Predicate typed to String, lambda expression uses declared
+        // parameter type, and {} body with return value
+        Predicate<String> b4 = (String s) -> {
+            return s.equals("hello");
+        };
+        System.out.println("The value of Predicate [(String s) ->" +
+                " { return s.equals(\"hello\");}].test(\"hello\") = " +
+                b4.test("hello"));
+
+        System.out.println("\nTesting Default Methods");
+        // Negate the last Predicate using default method on Predicate
+        Predicate<String> b5 = b4.negate();
+
+        System.out.println("The value of Predicate negated [(String s) ->" +
+                " { return s.equals(\"hello\");}].test(\"hello\") = " +
+                b5.test("hello"));
+
+        Predicate<Integer> firstTest = i -> {
+            System.out.println("\tFirst Test");
+            return i > -10;
+        };
+        Predicate<Integer> secondTest = i -> {
+            System.out.println("\tSecond Test");
+            return i < 10;
+        };
+
+        // Assign the joined predicates to another Predicate variable
+        Predicate<Integer> bFinal = firstTest.or(secondTest);
+        System.out.println("Executing firstTest[i > -10].or(secondTest" +
+                "[i < 10]).test(-11)");
+        System.out.println("\tResult = " + bFinal.test(-11));
+
+        // Execute the joined predicates directly as shown:
+        System.out.println("Executing firstTest[i > -10].and(secondTest" +
+                "[i < 10]).test(0)");
+        System.out.println("\tResult = " + firstTest.and(secondTest).test(0));
+
+        // Short-circuiting and
+        System.out.println("Executing firstTest[i > -10].and(secondTest" +
+                "[i < 10]).test(-11)");
+        // here only FirstTest executed bcoz the result was false from FirstTest
+        System.out.println("\tResult = " + firstTest.and(secondTest).test(-11));               /******** TRICKY **************/
+
+        // Short-circuiting or
+        System.out.println("Executing firstTest[i > -10].or(secondTest" +
+                "[i < 10]).test(0)");
+        // here only FirstTest executed bcoz the result was true from FirstTest
+        System.out.println("\tResult = " + firstTest.or(secondTest).test(0));      /******** TRICKY **************/
+
+        // Add negate...
+        System.out.println("Executing firstTest[i > -10].or(secondTest" +
+                "[i < 10]).negate().test(0)");
+        System.out.println("\tResult = " + firstTest.or(secondTest).negate().test(0));
+
+        System.out.println("The value of Predicate.isEqual(\"hello\") with " +
+                "value of \"hello\" = " +
+                Predicate.isEqual("hello").test("hello"));
+
+        System.out.println("The value of Predicate.not(" +
+                "Predicate.isEqual(\"hello\")) with value of \"hello\" = " +
+                Predicate.not(Predicate.isEqual("hello")).test("hello"));
+    }
+}
+
+-------------------------------------------------------------------
+############### java.util.Function Function and BiFunction
+
+public interface Function<T, R> {
+  R apply(T t);
+  .....
+}
+
+it has 2 default methods:
+1- compose.
+2- andThen
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+public class Test {
+    public static void main(String[] args) {
+
+        int i = 0;
+        // First, sublist
+        Function<List<Integer>, List<Integer>> fPre =
+                (s) -> {
+                    System.out.println("fPre executed");
+                    return s.subList(1, 4);
+                };
+
+        // Second, make it a String - main function
+        Function<List<Integer>, String> fResult =
+                (s) -> {
+                    i++; // cant change local variable value in lambda
+                    System.out.println("fResult executed");
+                    return s.toString();
+                };
+
+        // After its a String, replace comma with space
+        Function<String, String> fPost =
+                (s) -> {
+                    System.out.println("fPost executed");
+                    return s.replace(',', ' ');
+                };
+
+        // Executing by chaining Function local variables...
+        System.out.println("fResult.compose(fPre).andThen(fPost).apply = " +
+                fResult.compose(fPre).andThen(fPost).
+                        apply(List.of(10, 20, 30, 40, 50)));
+
+        // order is not important, u can put andThen before compose, still okay,,,
+        // Executing by chaining Function local variables...
+        System.out.println("fResult.compose(fPre).andThen(fPost).apply = " +
+                fResult.andThen(fPost).compose(fPre).
+                        apply(List.of(10, 20, 30, 40, 50)));
+
+        // Executing by chaining lambda expressions - ugly but ok
+        String newResult = (
+                (Function<List<Integer>, String>) ((s) -> s.toString())).
+                <List<Integer>>compose((s) -> s.subList(1, 4)).
+                <String>andThen((s) -> s.replace(',', ' '))
+                .apply(List.of(10, 20, 30, 40, 50));
+
+        System.out.println("Chaining it all together: " + newResult);
+
+        System.out.println("---- BiFunction Examples -----");
+        // Example of BiFunction, accepts two String arguments, returns a
+        // String value
+        BiFunction<String, String, String> b1 = (s, t) -> s + " and " + t;
+        System.out.println("BiFunction [b1 = (s, t) -> s + \" and \" + t] " +
+                ".apply(\"Hello\",\"World\") = " + b1.apply("Hello", "World"));
+
+        BiFunction<String, String, List<String>> b2 =
+                (String s, String t) -> {
+                    List<String> a = new ArrayList<>();
+                    a.addAll(List.of(s.split("\\s")));
+                    a.add(t);
+                    return a;
+                };
+
+        System.out.println("BiFunction b2.apply(\"Hello my old friend\"," +
+                "\"and world\") = " + b2.apply("Hello my old friend",
+                "and world"));
+
+    }
+}
+
+-------------------------------------------------------------------
+############### java.util.Function Consumer and Supplier
+
+#### consumer
+public interface Consumer<T> {
+   void accept(T t);
+   .....
+}
+
+public interface BiConsumer<T , U> {
+  void accept(T t, U u);
+}
+
+Note:
+Consumer DOES NOT have compose method, it only has andThen.
+
+### supplier
+public interface Supplier<T> {
+   T get();
+}
+
+consumer example:
+
+
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+public class Test {
+    public static void main(String[] args) {
+        // Consumer variable assigned a lambda expression which
+        // simply prints out String passed to it
+        Consumer<String> c = (s) -> System.out.println("This is " + s);
+
+        // Consumer variable assigned a lambda expression which uses
+        // the local variable c of type Consumer.
+        Consumer<List<String>> cb = (t) -> t.forEach(c);
+
+        System.out.print("Consumer.accept(\"Testing Consumer Accept\") = ");
+        // Consumer return type is void...
+        c.accept("Testing Consumer Accept");
+
+        // Print the heading
+        System.out.println("Consumer.accept(One,Ten,Twelve,Three,Four) = ");
+        // Execute accept on List<String> - prints each element using
+        // local variable Consumer c.
+        cb.accept(List.of("One", "Ten", "Twelve", "Three", "Four"));
+
+        // BiConsumer variable has two arguments, List and Consumer ...
+        BiConsumer<List<String>, Consumer<String>> bi = (s, t) -> s.forEach(t);
+
+        // Print the heading
+        System.out.println("BiConsumer.accept(One,Ten,Twelve,Three,Four) = ");
+        // Execute accept on a List<String> using a Consumer (a lambda expression)
+        bi.accept(List.of("One", "Ten", "Twelve", "Three", "Four"),
+                (s) -> System.out.println("\tCounting... " + s));
+
+        // Create a second BiConsumer variable to demonstrate andThen...
+        BiConsumer<List<String>, Consumer<String>> biConsumerAndThen =
+                (s, t) -> s.forEach(System.out::print);
+
+        // Executing andThen on it's own does nothing
+        System.out.println("\n--- Executing just BiConsumer.andThen ---");
+        // NOTE: here u must assign it back to same variable , otherwise it wont be invoked...            /************ TRICKY ************/
+        bi = bi.andThen(biConsumerAndThen);
+
+
+        bi.accept(
+                List.of("One", "Ten", "Twelve", "Three", "Four"),
+                (s) -> System.out.println("\t" + s));
+
+        // Executing andThen() method on it's own does nothing, must
+        // be chained to the accept() method.
+        System.out.println("\n--- Executing BiConsumer.andThen(" +
+                "biConsumerAndThen).accept ---");
+        bi.andThen(biConsumerAndThen).accept(
+                List.of("One", "Ten", "Twelve", "Three", "Four"),
+                (s) -> System.out.println("\t" + s));
+
+    }
+}
+
+supplier example:
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+public class Test {
+    public static void main(String[] args) {
+        // Set a local variable to a default String
+        String s;
+        if (args != null && args.length > 0) s = args[0];
+        else s = "This that and the other and so forth";
+
+        // Create the Supplier local variable with lambda Expression that
+        // calls private method and uses local variable
+        Supplier<List<String>> supplier = () -> getData(s);
+
+        // Count # of words user entered or words in String default
+        System.out.println("# of words entered = " + supplier.get().size());
+    }
+
+    // Private method splits String into words, returns as list
+    private static List<String> getData(String s) {
+        return new ArrayList<String>(List.of(s.split("\\s")));
+
+    }
+}
+
+-------------------------------------------------------------------
+############### java.util.Function Primitive variations
+
+remember that the methods name for primitive is different,
+example:
+
+applyAsDouble, getAsInt()....                 /******************* TRICKY ***************/
+
+import java.util.function.*;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // DoubleUnaryOperator takes primitive double and returns a double
+        DoubleUnaryOperator duo = (double d) -> d++ + d--;
+        System.out.println("DoubleUnaryOperator.applyAsDouble(3) returns " +
+                "double: " + duo.applyAsDouble(3));
+
+        // DoubleBinaryOperator takes two primitive double parameters
+        // and returns a double
+        DoubleBinaryOperator dbo = (double d, double e) -> d + 5 * e + d;
+        System.out.println("DoubleBinaryOperator.applyAsDouble(3,1) " +
+                "returns double: " + dbo.applyAsDouble(3d, 1d));
+
+        // DoubleFunction<R> takes a primitive double as parameter and
+        // returns an object determined by <R> generic type
+        DoubleFunction<String> df =
+                (double d) -> String.format("Value of PI = %.2f", d);
+        System.out.println("DoubleFunction.apply(Math.PI) returns String: " +
+                df.apply(Math.PI));
+
+        // DoubleToIntFunction takes a primitive double as parameter and
+        // returns an int
+        DoubleToIntFunction dif = (double d) -> (int) d;
+        System.out.println("DoubleToIntFunction.applyAsInt(Math.PI) " +
+                "returns int: " + dif.applyAsInt(Math.PI));
+
+        // DoubleToLongFunction takes a primitive double as parameter and
+        // returns a long
+        DoubleToLongFunction dil = (double d) -> (long) d;
+        System.out.println("DoubleToLongFunction.applyAsLong(Math.PI) " +
+                "returns long: " + dil.applyAsLong(Math.PI));
+
+        // ToDoubleFunction<T> takes a parameter of specified type and
+        // returns a primitive double
+        ToDoubleFunction<String> tdf = (String s) -> Double.parseDouble(s);
+        System.out.println("ToDoubleFunction<String>." +
+                "applyAsDouble(\"10.98765\") returns double: " +
+                tdf.applyAsDouble("10.98765"));
+
+        // ToDoubleBiFunction<T, U> takes parameters of specified types and
+        // returns a primitive double
+        ToDoubleBiFunction<String, String> tdb =
+                (String s, String t) -> Double.parseDouble(s) +
+                        Double.parseDouble(t);
+
+        System.out.println("ToDoubleBiFunction<String,String>" +
+                ".applyAsDouble(\"10.98765\",\"0.02\") returns double: "
+                + tdb.applyAsDouble("10.98765", "0.02"));
+
+        // DoublePredicate takes a primitive double data type
+        DoublePredicate dp = (double d) -> d == 0;
+        System.out.println("DoublePredicate.test(Math.PI) returns boolean: "
+                + dp.test(Math.PI));
+
+        // DoubleConsumer takes a primitive double data type
+        DoubleConsumer dc =
+                (double d) -> System.out.println("Do something with " + d);
+        System.out.print("DoubleConsumer.accept(Math.PI)) returns void: ");
+        dc.accept(Math.PI);
+
+        // ObjDoubleConsumer(this is like a BiConsumer) takes a type <T> and
+        // primitive double parameter
+        ObjDoubleConsumer<Object> dco =
+                (Object s, double d) ->
+                        System.out.println((String) s + " " + d);
+        System.out.print("ObjDoubleConsumer.accept(\"PI equals\",Math.PI) " +
+                "returns Object: ");
+        dco.accept("PI equals", Math.PI);
+
+        // DoubleSupplier returns double value as return type
+        DoubleSupplier ds = () -> Double.parseDouble("10.0");
+        System.out.print("DoubleSupplier.getAsDouble(\"10.0\")) " +
+                " returns double:  " + ds.getAsDouble());
+
+    }
+}
+
+another example about IntUnaryOperator:
+
+import java.util.function.*;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // IntUnaryOperator Operator takes primitive int and returns an int
+        IntUnaryOperator iuo = (int i) -> i++ + i--;
+        System.out.println("IntUnaryOperator.applyAsInt(10) returns " +
+                "int: " + iuo.applyAsInt(10));
+
+        // IntBinaryOperator takes two primitive int parameters
+        // and returns a int
+        IntBinaryOperator ibo = (int d, int e) -> d + 5 * e + d;
+        System.out.println("IntBinaryOperator.applyAsInt(15,1) " +
+                "returns int: " + ibo.applyAsInt(15, 1));
+
+        // IntFunction<R> takes a primitive int as parameter and
+        // returns an object determined by <R> generic type
+
+        IntFunction<String> intf = (int i) ->
+                String.format("Value of Integer.MAX_VALUE = %d", i);
+        System.out.println("IntFunction.apply() returns String: " +
+                intf.apply(Integer.MAX_VALUE));
+
+        // IntToDoubleFunction takes a primitive int as parameter and
+        // returns an double
+        IntToDoubleFunction idf = (int i) -> (double) i;
+        System.out.println(
+                "IntToDoubleFunction.applyAsInt(Integer.MAX_VALUE) " +
+                        "returns double: " + idf.applyAsDouble(Integer.MAX_VALUE));
+
+        // IntToLongFunction takes a primitive int as parameter and
+        // returns a long
+        IntToLongFunction ilf = (int d) -> (long) d;
+        System.out.println(
+                "IntToLongFunction.applyAsLong(Integer.MAX_VALUE) " +
+                        "returns long: " + ilf.applyAsLong(Integer.MAX_VALUE));
+
+        // ToIntFunction<T> takes a parameter of specified type and
+        // returns a primitive int
+        ToIntFunction<String> tdf = (String s) -> Integer.parseInt(s);
+        System.out.println("ToIntFunction<String>." +
+                "applyAsInt(\"98765\") returns int: " +
+                tdf.applyAsInt("98765"));
+
+        // ToIntBiFunction<T, U> takes parameters of specified types and
+        // returns a primitive int
+        ToIntBiFunction<String, String> tdb =
+                (String s, String t) -> Integer.parseInt(s) +
+                        Integer.parseInt(t);
+
+        System.out.println("ToIntBiFunction<String,String>" +
+                ".applyAsInt(\"1098765\",\"2\") returns int: "
+                + tdb.applyAsInt("1098765", "2"));
+
+        // IntPredicate takes a primitive int data type
+        IntPredicate dp = (int d) -> d == Integer.MAX_VALUE;
+        System.out.println("IntPredicate.test(Integer.MAX_VALUE) returns"
+                + " boolean: " + dp.test(Integer.MAX_VALUE));
+
+        // IntConsumer takes a primitive int data type
+        IntConsumer ic = (int i) ->
+                System.out.println("Do something with " + i);
+        System.out.print(
+                "IntConsumer.accept(Integer.MAX_VALUE)) returns void: ");
+        ic.accept(Integer.MAX_VALUE);
+
+        // ObjIntConsumer (this is like BiConsumer) takes a type <T>
+        // and primitive int parameter
+        ObjIntConsumer<Object> ico = (Object s, int i) ->
+                System.out.println((String) s + " " + i);
+        System.out.print("ObjIntConsumer.accept(\"Integer.MAX_VALUE " +
+                " equals\",Integer.MAX_VALUE) returns Object: ");
+        ico.accept("Integer.MAX_VALUE equals", Integer.MAX_VALUE);
+
+        // IntSupplier returns int value as return type
+        IntSupplier is = () -> Integer.parseInt("100");
+        System.out.print("IntSupplier.getAsInt(\"100\")) " +
+                "returns int: " + is.getAsInt());
+
+    }
+}
+
+
+-------------------------------------------------
+out of ordinary #1:
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.*;
+
+// Item class
+class Item {
+    String sku;
+    String description;
+
+    // No args constructor
+    Item() {
+        sku = "#AAAA";
+        description = "unknown";
+    }
+
+    // Single args constructor
+    Item(String sku) {
+        this.sku = sku;
+        description = "unknown";
+    }
+
+    // Multiple args constructor
+    Item(String sku, String description) {
+        this.sku = sku;
+        this.description = description;
+    }
+
+    // Clone method
+    public Item clone() {
+        String firstPart = this.sku.split("-")[0];
+        return new Item(firstPart + "-0001", "cloned");
+    }
+
+    // toString method
+    public String toString() {
+        return "Item{" +
+                "sku='" + sku + '\'' +
+                ", description='" + description + '\'' +
+                '}';
+    }
+}
+
+// Class which uses many built-in interface to do basically the
+// same thing, create a new Item object ..
+public class Test {
+    public static void main(String[] args) {
+
+
+        // Consumer & Lambda Expression
+        Consumer<List> s6 = s -> s.add(new Item("#EEEE-0000", "e Product"));
+
+        // Predicate & Lambda Expression
+        Predicate<List> s7 = s -> s.add(new Item("#FFFF-0000", "f Product"));
+
+        // Create a new List of Item
+        List<Item> list = new ArrayList<>();
+
+        // Executing methods with built-in interface arguments
+        createAndAddItem(list, s6);
+        createAndAddItem(list, s7);
+
+        // below will show compiler error 'Ambiguous method call. Both' as we have two methods with same potential consumer.           /************** TRICKY **************/
+        createAndAddItem(list,
+                s -> s.add(new Item("#EEEE-0000", "e Product")));
+
+        // Setting Function and Supplier to the same code..
+        Function<String, Item> function = Item::new;
+        Supplier<Item> supplier = Item::new;
+
+        // Pass method reference to method which accepts Supplier
+//        Item i = createItem("Test", Item::new);
+        // we need casting here to clear Ambiguous error
+        Item i = createItem("Test", (Function<String,Item>) Item::new);                    /************** TRICKY **************/
+        i = createItem("Test", (Supplier<Item>) Item::new);                                /************** TRICKY **************/
+    }
+
+    // Overloaded Method accepts Consumer
+    private static void createAndAddItem(List<Item> l, Consumer<List> c) {
+        c.accept(l);
+    }
+
+    // Overloaded Method accepts Predicate
+    private static void createAndAddItem(List<Item> l, Predicate<List> p) {
+        p.test(l);
+    }
+
+    // Method accepts Supplier which creates a new item with defaults
+    private static Item createItem(String s, Supplier<Item> supplier) {
+        Item i = supplier.get();
+        i.sku = s;
+        return i;
+    }
+
+    // Method accepts Function which creates a new item
+    private static Item createItem(String s,
+                                   Function<String, Item> function) {
+        return function.apply(s);
+    }
+}
+
+----------------------------------------------------
+out of ordinary #2:
+
+compose only supported in Function and UnaryOperator
+
+-------------------------------------------------
+
+Which of the following are NOT names of interfaces in the java.util.function package
+
+
+
+A.  BooleanSupplier
+
+
+
+B.  DoubleFunction
+
+
+
+C.  DoubleBiFunction
+
+
+
+D.  DoubleToFloatFunction
+
+
+
+E.  LongPredicate
+
+
+
+F.  ObjLongConsumer
+
+Both (DoubleBiFunction and DoubleToFloatFunction) are not names of interfaces in the java.util.function package.

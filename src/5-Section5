@@ -1,0 +1,2922 @@
+##################################### Generic and Collections #########################
+######### boxing and unboxing
+1- all primitive wrapper class extends java.lang.Number except Boolean and Character they not extend Number.
+2- all wrapper classes are final and cant be extended from other classes.       /************ MEMORIZE ***********/
+3- Wrappers constructors have been deprecated, and u can create instances of wrappers using valueOf method...
+4- boolean primitive in class field is false by default.
+5- Boolean wrapper in class field is null by default.
+
+example below about assigning wrapper Boolean to primitive,
+when u dont init the wrapper then default value is null
+and this will thro NPE bcoz u assigning null to primitive type...
+
+
+public class Test {
+
+    // No assignment required for static and instance fields
+    static Boolean myStaticBoolean = true;  // default is null . if u remove =true then default value is null and it will show NPE  /************* TRICKY ***********.
+    // bcoz u assigning null to myInstanceboolean: boolean myInstanceboolean = myStaticBoolean;
+
+    static boolean myStaticboolean;  // default is false
+
+    // Autoboxing permitted during assignment to a field
+    Boolean myInstanceBoolean = false;
+
+    // Unboxing permitted during assignment to a field
+    boolean myInstanceboolean = myStaticBoolean;
+
+    public static void main(String[] args) {
+        Test w = new Test();
+
+        // Set a wrapper variable to a boolean variable (AutoBoxing)
+        Boolean bWrapperVariable = w.myInstanceboolean;
+        System.out.println("bWrapperVariable = " + bWrapperVariable);
+
+        // Set a wrapper variable to a boolean literal (AutoBoxing)
+        Boolean bWrapperVariable2 = true;
+        System.out.println("bWrapperVariable2 = " + bWrapperVariable2);
+
+        // Set a primitive variable directly to a wrapper (Unboxing)
+        boolean bPrimitiveVariable = w.myInstanceBoolean;
+        System.out.println("bPrimitiveVariable = " + bPrimitiveVariable);
+
+        // Passing boolean primitive to Boolean wrapper parameter
+        // (Autoboxing)
+        testBoolean(true);
+
+        // Passing Boolean local variable to boolean primitive
+        // parameter (Unboxing)
+        testboolean(bWrapperVariable);
+    }
+
+    // Method declared with Boolean wrapper but can be invoked
+    // with a primitive
+    private static void testBoolean(Boolean b) {
+        System.out.println("Boolean Wrapper Value = " + b);
+    }
+
+    // Note case of method name below, avoiding overloading the method
+    // Do not want JVM to decide which method is invoked.
+    private static void testboolean(boolean b) {
+        System.out.println("boolean Value = " + b);
+    }
+}
+
+6- all wrappers implements Comparable interface and have compareTo method
+7- all wrappers have static method compare which compare two values X and Y : Integer.compare(x,y);
+8- u cant convert wrapper to primitive also using method provided by wrapper:
+  boolean b = booleanWrapper.booleanValue();
+  int i = integerWrapper.intValue();
+
+  Boolean.compare(true, false); // value = 1
+  Integer.compare(5, 10); // value = -1
+  Integer.compare(10, 5); // value=  1
+
+  /******************* MEMORIZE THE FOLLOWING RULES *********************/
+  * compareTo for numerics (Float, Long, Integer..):
+  - 0 if both equal
+  - 1 if wrapper value > parameter value
+  - -1 if wrapper value < parameter value
+
+  * compareTo for Boolean:
+  - 0 if both equal.
+  - 1 if wrapper is true and parameter is false.
+  - -1 if wrapper is false and parameter is true.
+
+  * compareTo for Character wrapper:
+  - 0 if both equal.
+  - positive number n, if wrapper value > param value, where n represent the difference in value.
+  - negative number -n, if wrapper value < param value, where n represent the difference in value.
+
+  * equals(Object o);
+  - if Object o is null, always returs false.
+
+  * valueOf in wrapper:
+  - all wrappers support valueOf("TRUE"); they accept it as String EXCEPT Character it accept only char:
+    Character.valueOf('A');                  /************** TRICKY ******************/
+
+example below:
+
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        // ---- Autoboxing instantiations of Wrappers ----
+        Boolean bWrapper = true;
+        Character cWrapper = 'a';
+
+        // Note that autoboxing and type conversion can occur
+        Short sWrapper = 10;
+        Integer iWrapper = 0b00100001;  // binary representation of 33
+
+        Integer iWrapper2 = 0xABC;
+        Double dWrapper = 20.0D;
+        Float fWrapper = 2.0e2f;
+        Character cWrapper2 = '\u0041';
+
+        printWrappers("Autoboxed Assignments", bWrapper, cWrapper,
+                sWrapper, iWrapper, dWrapper, fWrapper,
+                iWrapper2, cWrapper2);
+
+        // ---- Using valueOf methods to create instances ----
+        // valueOf methods can accept a String or primitive
+
+        printWrappers("Boolean.valueOf Instances",
+                Boolean.valueOf(true),
+                Boolean.valueOf("FALSE"),
+                Boolean.valueOf(null)); // notice here Boolean.valueOf(null) is false.... /////*********** TRICKY ************/////
+
+        // Character does NOT support a valueOf with a String parameter.
+        printWrappers("Character.valueOf Instances",
+                Character.valueOf('a'),
+                Character.valueOf('\u0041'));
+
+        printWrappers("Integer valueOf Instances",
+                Integer.valueOf(100),
+                Integer.valueOf('a'), // it will print the binary value of a which is 97
+                Integer.valueOf("100")
+        );
+
+        printWrappers("Float valueOf Instances",
+                Float.valueOf(10),
+                Float.valueOf('a'),
+                Float.valueOf(12.5f),
+                Float.valueOf("100.0"),
+                Float.valueOf("15.0F"),
+                Float.valueOf("250.0D")
+        );
+
+        // examine the output from testExceptions();
+        testExceptions(); // here notice that Float.valueOf(null) is thro NPE...
+
+        Character.valueOf("A"); // compiler error as Character.valueOf does not support String...
+
+        Integer.valueOf('a'); // it support char as param
+        Integer.valueOf("10"); // it support String as param
+
+        printWrappers("Integer.valueOf with Radix",
+                Integer.valueOf("100", 2),
+                Integer.valueOf("100", 8),
+                Integer.valueOf("100", 16)
+        );
+
+    }
+
+    // Method to help print output consistently,  Note that wrappers can be
+    // passed generically to a method as Objects.  The 8 wrappers only have
+    // Object in common.
+    public static void printWrappers(String title, Object... wrappers) {
+        System.out.println("------------" + title + " -----------------");
+        for (Object o : wrappers) {
+            System.out.println(o.getClass().getSimpleName() + " : " + o);
+        }
+    }
+
+    // This method isolates the exceptions for valueOf
+    public static void testExceptions() {
+
+        // Use a local class that allows us to test many samples.
+        class WrapIt {
+            String type;
+            String value;
+
+            WrapIt(String type, String value) {
+                this.type = type;
+                this.value = value;
+            }
+
+            // Tests restricted to Float and Integer
+            public Object getWrapper() {
+                switch (type) {
+                    case "Float":
+                        return Float.valueOf(value);
+                    case "Integer":
+                        return Integer.valueOf(value);
+                }
+                return null;
+            }
+            public String toString() {
+                return type+".valueOf("+value+")";
+            }
+        }
+
+        // The test scenarios
+        WrapIt[] tests = {
+                new WrapIt("Float", null),
+                new WrapIt("Integer", "10.0"),
+                new WrapIt("Integer", "10f"),
+                new WrapIt("Integer", "100_000"),
+                new WrapIt("Integer", "0b00100001"),
+                new WrapIt("Integer", "0xABC")
+
+        };
+
+        // Loop through test scenarios
+        for (WrapIt w : tests ) {
+            try {
+                w.getWrapper();
+                System.out.println(w+"  worked");
+            } catch (Exception e) {
+                System.out.println(w+" " +e);
+            }
+        }
+    }
+}
+
+9- Integer.getInteger is different from Integer.valueOf, the first one read value from system properties
+   and return null if value not exists.
+10- notice the following output for equal method in wrappers:
+
+[Integer(100)].equals([Integer(100)] = true
+[Integer(100)].equals([Short(100)] = false
+[Integer(100)].equals([Short(100)] = false
+
+its false for Short bcoz equals using equal from object method and it will compare the type and reference..
+
+example below:
+
+public class Test {
+    public static void main(String[] args) {
+        testInstanceMethods();
+        testStaticMethods();
+    }
+
+
+    static Boolean  bWrapper = true;
+
+    private static void testInstanceMethods() {
+
+        Character cWrapper = 'c';
+        Integer iWrapper = 100;
+        Short sWrapper = 100;
+
+        System.out.println("==== Using the instance wrapper methods ====");
+        System.out.println("---- Using the {primitive}Value() methods ----");
+//        System.out.println("Using bWrapper.booleanValue() produces: "
+//                + bWrapper.booleanValue()); // it will throw NPE if value is null
+
+        System.out.println("Using iWrapper.integerValue() produces: "
+                + iWrapper.intValue());
+
+        System.out.println("Using cWrapper.charValue() produces: "
+                + cWrapper.charValue());
+
+        System.out.println("---- Using the equals method ----");
+        Boolean bWrapper2 = true;
+        System.out.println(printWrapper(bWrapper) + ".equals(null) = " +
+                bWrapper.equals(null));
+        System.out.println(printWrapper(bWrapper) + ".equals(false) = " +
+                bWrapper.equals(false));
+        System.out.println(printWrapper(bWrapper) + ".equals(true) = " +
+                bWrapper.equals(true));
+        System.out.println(printWrapper(bWrapper) + ".equals(" +
+                printWrapper(bWrapper2) + " = " +
+                bWrapper.equals(bWrapper2));
+
+        Integer iWrapper2 = 100;
+        System.out.println(printWrapper(iWrapper) + ".equals(null) = " +
+                iWrapper.equals(null));
+        System.out.println(printWrapper(iWrapper) + ".equals(" +
+                printWrapper(iWrapper2) + " = " +
+                iWrapper.equals(iWrapper2));
+
+        // Wrapper object types must match exactly
+        System.out.println(printWrapper(iWrapper) + ".equals(" +
+                printWrapper(sWrapper) + " = " +
+                iWrapper.equals(sWrapper));
+
+        System.out.println(printWrapper(iWrapper) + ".equals(" +
+                printWrapper(sWrapper) + " = " +
+                ((Number) iWrapper).equals((Number) sWrapper));
+
+    }
+
+    public static String printWrapper(Object o) {
+        return "[" + o.getClass().getSimpleName() + "(" + o + ")]";
+    }
+
+    private static void testStaticMethods() {
+
+        System.out.println("\n==== Using the static wrapper methods ====");
+        System.out.println("---- Using the compare method ----");
+        System.out.println("Boolean.compare(true,true) = " +
+                Boolean.compare(true, true));
+        System.out.println("Boolean.compare(false,false) = " +
+                Boolean.compare(false, false));
+        System.out.println("Boolean.compare(true,false) = " +
+                Boolean.compare(true, false));
+        System.out.println("Boolean.compare(false,true) = " +
+                Boolean.compare(false, true));
+
+        System.out.println("Integer.compare(2,0b10) = " +
+                Integer.compare(2, 0b10));
+        System.out.println("Integer.compare(10,0) = " +
+                Integer.compare(10, 0));
+        System.out.println("Integer.compare(0,10) = " +
+                Integer.compare(0, 10));
+        System.out.println("Integer.compare('A','a') = " +
+                Integer.compare('A', 'a'));
+
+        System.out.println("Character.compare('a','\\u0061') = " +
+                Character.compare('a', '\u0061'));
+        System.out.println("Character.compare('A','a'') = " +
+                Character.compare('A', 'a'));
+        System.out.println("Character.compare('Z','A') = " +
+                Character.compare('Z', 'A'));
+
+        System.out.println("\n---- Using the parse[Primitive](String s) ");
+
+        System.out.println("Integer.parseInt(\"100\") = " +
+                Integer.parseInt("100"));
+        System.out.println("Boolean.parseBoolean(\"TRUE\") = " +
+                Boolean.parseBoolean("TRUE"));
+
+        System.out.println("\n---- Using the get[Wrapper]() methods ----");
+
+        System.out.println("Integer.getInteger(\"10\") = " +
+                Integer.getInteger("10")); // it will show null bcoz no value in system properties with name 10... /*********** TRICKY *************/
+        System.out.println("Boolean.getBoolean(\"true\") = " +
+                Boolean.getBoolean("true"));// it will show false bcoz no value in system properties with name true ... /*********** TRICKY *************/
+
+        // Set some system properties
+        System.setProperty("app.threads", "10");
+        System.setProperty("app.debugFlag", "TRUE");
+
+        System.out.println(Integer.getInteger("app.threads"));
+        System.out.println(Boolean.getBoolean("app.debugFlag"));
+    }
+
+}
+
+example 2:
+very tricky, must run and observe the output....
+
+public class Test {
+    public static void main(String[] args) {
+
+        Integer i = 10;
+        short j = 10;
+
+        // A wrapper used in most operations is unboxed prior to the
+        // operation
+
+        // result of a wrapper and primitive can be assigned to a primitive
+        // variable
+        int intResult = i + j;
+
+        // result of a wrapper and primitive can be assigned to a wrapper
+        // variable
+        Integer integerResult = i + j;
+
+        // result of a wrapper and primitive can be assigned to a
+        // LVTI variable using var
+        var result = i + j;
+
+        System.out.println("intResult (type int) = " + intResult);
+        System.out.println("integerResult (type Integer) = " + integerResult);
+        System.out.println("result (LVTI) = " + result);
+
+        System.out.println(result.getClass().getName()); /// compiler error bcoz result is primitive int.....     /************* TRICKY ******************/
+        short shortResult = i + j; // compiler error , cant assign int to short, even tho u try to change type i to Short it will still same error, becoz operator + will promote the value to int .... /************* TRICKY ******************/
+        Short shortWrapperResult = i + j; // compiler error , required Short and provided int...  /************* TRICKY ******************/
+        /**********
+         * Note: the any operator we do for type smaller than int, it will first be promoted to int then evaludate the operation.....
+         *
+         * **********/
+
+        Integer k = 10;
+        Short s = Short.valueOf("10");
+        int m = 10;
+        if (s instanceof Number) { // cant use instanceof with primitve type, it should be wrapper object.....
+            System.out.println(" s is instance of Number ");
+            if (s instanceof Integer) { // cant cast Short to Integer, u must change s declaration to : Number s = Short.valueOf("10");
+                System.out.println(" m is instance of Integer ");
+            }
+        }
+    }
+}
+
+--------------------------------------------------------------------------
+############## Generics
+
+at minimum the generic class declared as follows:
+
+public class GenericContainer<T> {
+.....
+}
+where:
+T is type param that will be specified at runtime.
+
+Generic declaration examples:
+
+GenericClass<String> genericString = new GenericClass<String>();
+// but compiler can figure out the type from variable declaration (type inference),
+so we can use the diamond notation <> instead of <String>:
+GenericClass<String> genericString = new GenericClass<>();
+
+GenericClass<String> genericString = new GenericClass();
+// this is valid but discouraged and ide will flag this as warning (unchecked assignment) , and the genericString implied as GenericClass<Object>
+
+we can also use var:
+var genericString = new GenericClass<String>();
+
+1- diamond declaration can be only used if the left hand side was the declaration:
+   GenericClass<String> genericString = new GenericClass<>(); // OKAY
+
+   GenericClass<String> genericString;
+   genericString = new GenericClass<>(new StringBuilder("hello")); // compiler error, genericString was declared as string and here u assigning StringBuilder... /**************** TRICKY *******************/
+
+example below:
+
+
+// Declaring a generic class
+class GenericallyTypedClass<T> {
+
+    // Declaring an instance variable using type parameter
+    T currentObj;
+
+    // Constructor allows passing an object to the Generic class
+    // using the type parameter T
+    GenericallyTypedClass(T t) {
+        this.currentObj = t;
+        printType();
+    }
+
+    // instance method
+    public void printType() {
+        System.out.println("Instance variable type is T but compile" +
+                " time type = " + this.currentObj.getClass().getName());
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        // Declare and instantiate different instances of generic class
+
+        // Declare type argument <String> on both sides of
+        // assignment operator
+        GenericallyTypedClass<String> generic1 =
+                new GenericallyTypedClass<>("hello");
+        generic1 = new GenericallyTypedClass<>(new StringBuilder("hello")); // compiler error, generic1 was declared as type String, and here u r assigning it as StringBuilder.....  /*******  TRICKY ************//
+        generic1 = new GenericallyTypedClass<>(new String("hello")); // OKAY
+
+
+        // Declare type argument <StringBuilder> on left side of assignment,
+        // use <> diamond operator on right side
+        GenericallyTypedClass<StringBuilder> generic2 =
+                new GenericallyTypedClass<>(new StringBuilder("hello"));
+
+        // Declare a LVTI (var), and specify type argument on right side of
+        // assignment using  <Integer>
+        var generic3 = new GenericallyTypedClass<>(10);
+
+        generic1 = new GenericallyTypedClass(new StringBuilder()); // notice that this will compile but it will show runtime error (class cast exception)
+        // ONLY WHEN WE TRY TO GET THE VALUE IN BELOW CODE....
+        System.out.println("generic1 type: "+generic1.currentObj);  /*************** TRICKY *****************/
+
+        // cant use generic with primitive types
+//        String s2 = generic1.currentObj;
+//        GenericallyTypedClass<int> generic4 =
+//                new GenericallyTypedClass<int>(10);
+
+    }
+}
+
+2- restrictions of generics:           /**************** MEMORIZE ****************/
+  - cant extend Throwable or exception or any custom throwable or any custom exception....
+    this restriction is needed since the catch mechanism in JVM works only with non-generic...
+  - generic class cannot refer to a type parameter in any static member (static fields, static methods, static initializers).
+
+
+3- some compiler errors when declaring generic: /**************** MEMORIZE ****************/
+  - cant create instances of type parameters:
+    class GenericClass<T> {
+      T instanceT;
+
+      GenericClass() {
+         // invalid
+         instanceT = new T();
+      }
+
+    }
+
+    - cannot use instanceOf :
+      // compiler error
+      if (localVar instanceOf GenericClass<String>) {
+
+      }
+
+     - cannot assign or cast to a generic with a type argument:
+       GenericClass<Integer> i = new GenericClass<>();
+
+       // compiler error, incompatible types
+       GenericClass<Number> n1 = i;
+
+       // compiler error, inconvertible type
+       GenericClass<Number> n2 = (GenericClass<Number>) i;
+
+      - cant init arrays of generic types:
+        // compiler error
+        GenericClass<Integer> [] gArray = new GenericClass<Integer>[5];
+
+      - cannot overload a method where formal param type is same type
+        // invalid method have same erasures
+        private void methodA(GenericClass<String> s) {}
+
+        private void methodA(GenericClass<Number> s) {}
+
+      - cant catch or throw objects declared as with type parameter.
+        class GenericClass<T extends Throwable>
+        .....
+
+        try {
+
+        } catch (T e) { // compiler error, cannot catch typed parameter.
+
+        }
+
+      - cant use generic with primitive types.
+
+---------------------------------
+###### generic upper bound
+
+generic class is restricted to one type of bound called upper bound and it specified using extends keyword:
+
+public class GenericBounded<T extends Exception>
+
+or u can specify that T must extend Number and implements Comparable and Serializable interfaces:                 /************** TRICKY ***********/
+
+public class GenericBounded<T extends Number & Comparable & Serializable> // notice that Number must be at first, after that we can put N interfaces
+
+- we cant duplicate bounded class in generic, example:
+public class GenericBounded<T extends Number & Comparable<Integer> & Comparable<Short>> // compiler error
+
+- TRICKY EXPRESSION:                     /************** TRICKY **************/
+
+   // dont let the below code fool u, Comparable is a parameter type (same as T,K,V...etc) and NOT a bounded type,
+   class GenericNumberBounded <T extends Number, Comparable> {
+      T myNumber;
+      Comparable myComparable;
+
+      public int getValue(Comparable c) {
+        return this.compareTo(c); // compiler error...
+      }
+   }
+
+example below:
+
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.Month;
+
+// Generic class, unbounded
+class GenericNotBounded<T> {
+    // field declared to be parameter type
+    T instanceT;
+
+    // no args constructor
+    GenericNotBounded() {
+
+    }
+
+    // single argument, declared as parameter type
+    GenericNotBounded(T t) {
+        this.instanceT = t;
+        System.out.println("GenericNotBounded: instanceVariable (" +
+                t.getClass().getName() + ") = " + t);
+    }
+}
+
+// Generic class with an upper bound of the abstract class Number
+class GenericClassBound<T extends Number> {
+
+    public int getIntValue(T t) {
+        // Number's methods are available to any object of type T
+        return t.intValue();
+    }
+
+    public int getByteValue(T t) {
+        return t.byteValue();
+
+    }
+}
+
+// Generic class: upper bound of Comparable Interface
+class GenericInterfaceBound<T extends Comparable> {
+
+    public void doSomething(T t1, T t2) {
+
+        // Comparable's methods are available to any object of type T
+        int comparison = t1.compareTo(t2);
+        if (comparison > 0) {
+            System.out.println(t2 + " is behind " + t1);
+        } else {
+            System.out.println(t2 + " is ahead of " + t1);
+        }
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Instances of unbounded generic class. Types can be
+        // totally disparate
+        GenericNotBounded<Integer> g1 = new GenericNotBounded<>(10);
+        GenericNotBounded<Exception> g2 = new GenericNotBounded<>(new Exception());
+
+        // Instances of generic class bounded by Number
+        GenericClassBound<Byte> c1 = new GenericClassBound<>();
+        System.out.println("GenericClassBound<Byte>.getIntValue() = "
+                + c1.getIntValue(Byte.parseByte("10")));
+
+        GenericClassBound<Integer> c2 = new GenericClassBound<>();
+        System.out.println("GenericClassBound<Integer>.getIntValue() = "
+                + c2.getIntValue(128));
+        System.out.println("GenericClassBound<Integer>.getByteValue() = "
+                + c2.getByteValue(128));
+
+        // Instances of generic class bounded by Comparable
+        GenericInterfaceBound<LocalDate> i1 =
+                new GenericInterfaceBound<>();
+        i1.doSomething(LocalDate.now(),
+                LocalDate.of(2019, Month.SEPTEMBER, 29));
+
+        GenericInterfaceBound<Float> i2 = new GenericInterfaceBound<>();
+        i2.doSomething(12.34f, 12.345f);
+
+        // You can use a typed generic class as a parameter to another
+        // generic class.
+        GenericNotBounded<GenericClassBound<Integer>> e =
+                new GenericNotBounded<>(c2);
+
+    }
+}
+
+// Generic class, uses class and multiple interfaces for upper bound.
+// Type arguments limited to subclasses of Number, implementing both
+// Comparable and Serializable interfaces
+class GenericMixedBounded<T extends Number & Comparable & Serializable> { // Number must appear first... /********* TRICKY ********/
+
+}
+
+class GenericNumberBounded <T extends Number, Comparable> {
+    T myNumber;
+    Comparable myComparable;
+
+    public int getValue(Comparable c) {
+        return this.compareTo(c); // compiler error...
+    }
+}
+
+Key take notes:
+- generic cant extend Throwable.
+- cannot init a parameter type directly.. (T = new Number();)
+
+-------------------------------------------------------------
+############## generic methods
+
+- u can introduce generic into a method in a class whether the class itself generic or not.
+- type parameter at the method level can be used in both static and non-static methods.
+- generic method looks like:
+
+<Type Parameter> <Results>        <MethodDeclaration>
+<T>               T               getValue(T t) {
+  return t;
+}
+
+public <T> void doSomething(T t) {
+
+}
+
+- To invoke generic method:
+myObject.<String>doSomething("hello");
+
+example below:
+important to run and observe the results
+
+import java.util.ArrayList;
+import java.util.List;
+
+// A generic class with no generic methods
+class GenericsClass<T> {
+
+    // instance field set to type of type parameter of the class
+    T aGenericField;
+
+    // constructor takes argument (typed to type parameter of the class)
+    GenericsClass(T aGenericField) {
+        this.aGenericField = aGenericField;
+        System.out.println("GenericsClass constructor: " +
+                aGenericField.getClass().getName());
+    }
+
+    // method returns result typed to type parameter of the class
+    public T aGenericClassMethod() {
+        return this.aGenericField;
+    }
+
+    static T myFiled; // cant use static in generic class.         /************ TRICKY ***********/
+    static T getValue() { // cant use static in generic class.
+
+    }
+
+    public static <U> U aGenericClassStaticMethod(T u) { // cant refer T from a static method                  /************ TRICKY ***********/
+        System.out.println("Now this is a generic method");
+        return u;
+    }
+
+    public  <U> U aGenericClassStaticMethod2(T t, U u) { // u can mix between generic method param type and generic class param type    /************ TRICKY ***********/
+        System.out.println("Now this is a generic method");
+        return u;
+    }
+
+}
+
+// a non-generic class with generic methods
+class NonGenericClass {
+
+    // constructor declared with type parameter T.
+    // Method's single argument restricted to method type parameter
+    <T> NonGenericClass(T aGenericParameter) {
+        System.out.println("NonGenericClass: generic constructor: " +
+                aGenericParameter.getClass().getName());
+    }
+
+    // static method with type parameter
+    // Method's single argument restricted to method type parameter
+    public static <T> void genericStaticMethod(T aGenericParameter) {
+        System.out.println("NonGenericClass: static generic method: " +
+                aGenericParameter.getClass().getName());
+    }
+
+    // instance method with type parameter
+    // Method's single argument restricted to method type parameter
+    public <T> void genericInstanceMethod(T aGenericParameter) {
+        System.out.println("NonGenericClass: instance generic method: " +
+                aGenericParameter.getClass().getName());
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create instances of generic class using type arguments
+        GenericsClass<Number> a1 =
+                new GenericsClass<>(Double.valueOf("10"));
+        GenericsClass<ArrayList<String>> a2 =
+                new GenericsClass<>(new ArrayList(List.of("A", "B", "C")));
+
+        // Create instances of non-generic class with a generic
+        // constructor same as any other non-generic - compiler uses type
+        // inference
+        NonGenericClass b1 = new NonGenericClass(Double.valueOf("10"));
+
+        //  Alternately, you can specify the type for clarity if desired
+        NonGenericClass b2 = new <ArrayList<String>>NonGenericClass(
+                new ArrayList(List.of("A", "B", "C")));
+
+        // Invoking static generic method specifying type (optional)
+        NonGenericClass.<Exception>genericStaticMethod(
+                new RuntimeException("Just Testing"));
+
+        // Invoking instance generic method
+        b1.<StringBuilder>genericInstanceMethod(new StringBuilder("Hello"));
+    }
+}
+
+-------------------------------------------------------------
+############# generic wildcards
+
+wildcard is never used in following:
+1- to invoke a generic method.
+2- as a type argument for a generic method invocation.
+3- to instantiate a generic class.
+4- in a class declaration:
+  - to specify super type.
+  - or replace a type parameter.
+
+Types of wildcards:
+1- unbounded <?>                 /***************** TRICKY **************/
+   parameter that is declared with List<?> is NOT same as List<Object>.
+   List<?> will accept list of any type.
+   List<Object> will only accept list that contains Object.
+
+   remember List<Integer> does not meet the isA test for List<Object>.
+
+2- Upper Bound <? extends Number>  /************** MEMORIZE *************/
+   for example Number and its subclasses are allowable types in this example,
+
+3- Lower Bound <? super Exception>   /************** MEMORIZE *************/
+    Exception and its superclass Throwable and object allowed,
+    can be interpreted as Exception is allowed and any type
+    that is a superclass or supertype of Exception.
+
+example below:
+valid and invalid wildcard declaration //////******************** MEMORIZE ****************//////
+
+import java.util.List;
+
+class WildcardTests<T> {
+    private int val;
+
+    public WildcardTests() {
+
+    }
+
+    public WildcardTests(int val) {
+        this.val = val;
+    }
+
+    public static <U> void doSomething(U u) {
+        System.out.println(u);
+    }
+
+    private <?extends WildcardTests> void doSomething() {
+
+    }
+
+}
+
+public class Test {
+
+    // wildcard used in type argument of field declaration
+    List<?> instanceList;
+
+    // wildcard can be used nested in another type argument.
+    List<WildcardTests<?>> tests;
+
+    // wildcard used in type argument of static field declaration
+    static List<?> staticList;
+
+    // wildcard used in type argument of instance method parameter
+    private void setList(List<?> list) {
+        instanceList = list;
+    }
+
+    // wildcard used in return type of static method parameter
+    private static List<?> getList(List<?> list) {
+        return list;
+    }
+
+    // its valid
+    private List<? extends WildcardTests> getList2(List<?> list) {
+        return null;
+    }
+
+    // compiler error
+    private <?extends WildcardTests> void doSomething() {
+
+    }
+
+    public static void main(String[] args) {
+        Test swu = new Test();
+
+        // Set up some test data
+        List<WildcardTests> wildList =
+                List.of(new WildcardTests(1), new WildcardTests(2));
+
+        // wildcard used in type argument of local variable declaration
+        List<?> unboundedList =
+                List.of(1, 1.2f, true, 50, false, "Yes", new Exception());
+
+        swu.setList(wildList);
+        staticList = getList(wildList);
+
+        System.out.println(staticList);
+        System.out.println(swu.instanceList);
+        System.out.println(unboundedList);
+
+        WildcardTests.doSomething("Hello");
+        WildcardTests.<String>doSomething("Hello");
+
+        // compiler error
+        WildcardTests.<?>doSomething("Hello");    /*********** TRICKY ********/
+
+
+        WildcardTests<String> test1 = new WildcardTests<>(1);
+        WildcardTests<?> test2 = new WildcardTests<String>(2);                // its okay to use wildcard in left side, but NOT on right side...
+        // compiler error
+        WildcardTests<String> test3 = new WildcardTests<?>(3);  /*********** TRICKY ********/
+
+    }
+}
+
+// invalid declaration
+class AnotherClass1 extends WildcardTests<?> {           /*********** TRICKY ********/
+
+}
+
+// invalid declaration
+class AnotherClass2<?extends WildcardTests> {           /*********** TRICKY ********/
+
+}
+
+class AnotherClass3<T extends WildcardTests> {
+
+}
+
+1- Note:
+Integer isA Object, BUT List<Integer> IS NOT isA List<Object>            /************* TRICKY ***************/
+
+example:
+
+public void printObject (List<Object> list) {
+...
+}
+
+List<Integer> integerList;
+
+printObject(integerList);     // compiler error                 /*************** TRICKY *************/
+
+
+2- Note:
+
+cant have two overloaded method with same erasure (one extend and one super...):
+example:
+
+public static void printList( List<? extend Exception> list) { // compiler error...
+///
+}
+
+public static void printList( List<? super Exception> list) {
+///
+}
+
+example below:
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+
+    // Method prints elements in a list, restricted to Exception
+    // elements and any of its subclasses
+    public static void printUpperList(List<? extends Exception> list) {
+
+        // when using an upper bound, able to use specific methods and
+        // attributes on the specified type
+        System.out.println("----- Using upper bound ------");
+        list.forEach((s) -> System.out.println(s.getLocalizedMessage()));
+
+    }
+
+    // cant overload printUpperList
+//    public static void printUpperList(List<? super Exception> list) {
+//
+//        // when using an upper bound, able to use specific methods and
+//        // attributes on the specified type
+//        System.out.println("----- Using upper bound ------");
+//
+//    }
+
+    // Method prints elements in a list, restricted to Exception
+    // elements and any of its superclasses
+    public static void printLowerList(List<? super Exception> list) {
+        System.out.println("----- Using lower bound ------");
+        list.forEach((s) -> System.out.println(s));
+
+    }
+
+    // Method prints elements in a list, with no restrictions on
+    // type of element
+    public static void printOpenDoor(List<?> list) {
+        System.out.println("----- Using no bounds ------");
+        list.forEach((s) -> System.out.println(s));
+
+    }
+
+    // Method prints elements in a list, the list is made up of
+    // Objects
+    public static void printObjectList(List<Object> list) {
+        System.out.println("----- List made up of objects ------");
+        list.forEach((s) -> System.out.println(s));
+
+    }
+
+    public static void main(String[] args) {
+
+        // Create two lists typed slightly differently
+        ArrayList<RuntimeException> runtimeExceptionList =
+                new ArrayList<>();
+        ArrayList<Exception> exceptionList = new ArrayList<>();
+
+        // Populate with some forced exceptions
+        for (int i = 0; i < 3; i++) {
+            try {
+                int j = i / 0;
+            } catch (RuntimeException e) {
+                runtimeExceptionList.add(e);
+                exceptionList.add(e);
+            }
+        }
+
+        // RuntimeException allowed by upper bounded <? extends Exception>
+        printUpperList(runtimeExceptionList);
+        // RuntimeException allowed by unbounded <?>
+        printOpenDoor(runtimeExceptionList);
+
+        // RuntimeException NOT allowed by lower bounded <? super Exception>
+        //-- printLowerList(runtimeExceptionList);
+
+        // RuntimeException NOT allowed by type arg <Object>
+        //-- printObjectList(runtimeExceptionList);
+
+        // Exception allowed by upper bounded <? extends Exception>
+        printUpperList(exceptionList);
+        // Exception allowed by lower bounded <? super Exception>
+        printLowerList(exceptionList);
+        // Exception allowed by unbounded <?>
+        printOpenDoor(exceptionList);
+
+        // Exception NOT allowed by type arg <Object>
+        //-- printObjectList(exceptionList);
+
+        List<Integer> integerList = List.<Integer>of(5, 10, 15);
+        // Integer type allowed by unbounded wildcard <?>
+        printOpenDoor(integerList);
+
+        // Integer NOT allowed by upper bounded <? extends Exception>
+        //-- printUpperList(integerList);
+        // Integer NOT allowed by lower bounded <? super Exception>
+        //-- printLowerList(integerList);
+        // Integer NOT allowed by type arg <Object>
+        //-- printObjectList(integerList);
+
+        // Object meets requirement for all the methods, with the
+        // exception of the upper bound method.
+        List<Object> objectList = List.of("a", "B", "c");
+
+        // Object allowed by <? super Exception>
+        printLowerList(objectList);
+        // Object allowed by <?>
+        printOpenDoor(objectList);
+        // Object allowed by <Object>
+        printObjectList(objectList);
+
+        // Object NOT allowed by upper bounded <? extends Exception>
+        //--printUpperList(objectList);
+
+        List objectList2 = List.<Integer>of(5, 10, 15);
+        printObjectList(objectList2);
+
+        List objectList3 = integerList;
+        printObjectList(objectList3);
+        printObjectList((List) integerList);
+
+        printOpenDoor(objectList3);
+        printLowerList(objectList3);
+        try {
+            printUpperList(objectList3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+--------------------------------------------
+###### out of ordinary
+1- Integer is subtype of Number, Object.
+2- List<Integer> is subtype of Object and NOT subtype of List<Number>        /********** TRICKY *********/
+
+example below about using inheritance with generic:
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+
+    private static void methodOne(Number number) {
+        System.out.println("Declared parameter type is Number, " +
+                "Actual Type is " + number.getClass().getName());
+    }
+
+    private static void methodTwo(ArrayList<? extends Number> numberList) {
+        System.out.println(
+                "Declared parameter type is ArrayList<? extends Number>, " +
+                        "Actual Type is " + numberList.getClass().getName());
+    }
+
+    private static void methodThree(List<Integer> integerList) {
+        System.out.println("Declared parameter type is List<Integer>, " +
+                "Actual Type is " + integerList.getClass().getName());
+    }
+
+    public static void main(String[] args) {
+
+        Integer i = 1;
+
+        // Assigning an Integer to a Number variable works
+        Number n = i;
+
+        // Casting a Number variable to an Integer
+        Integer i2 = (Integer) n;
+
+        // Invoking a method using an Integer in place of a Number
+        // parameter
+        methodOne(i);
+
+        ArrayList<Integer> intArray = new ArrayList<>();
+
+        // Generics allow us to express a hierarchical relationship for
+        // contained class using wildcards.
+        ArrayList<? extends Number> numberList = intArray;
+
+        // Cannot cast:  Incontrovertible types
+        ArrayList<Integer> intArray2 =  (ArrayList<Integer>) numberList;
+
+        // Cannot invoke method which expects ArrayList<Number> with
+        // an ArrayList<Integer>
+        methodTwo(intArray);
+
+        // You can assign an ArrayList<Integer> to a List<Integer>
+        List<Integer> intList = intArray;
+
+        // You can cast
+        ArrayList<Integer> intList2 = (ArrayList<Integer>) intList;
+
+        // You can invoke a method passing an ArrayList<Integer> for
+        // a parameter declared as a List<Integer>
+        methodThree(intArray);
+
+    }
+
+}
+
+-------------------------------
+####### out of ordinary 2
+
+example:
+very tricky , must run the observe the code....
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 4: Generics and Collections
+Topic:  Generics, Confusing type parameters
+*/
+
+// class Container, a generic class with one type parameter
+// note: this Number is parameter type same as T,V. and NOT Number type ..
+class Container<Number> {
+
+    // instance variable
+    Number myNumber;
+
+    // Constructor
+    Container(Number myNumber) {
+        this.myNumber = myNumber;
+        System.out.println(this);
+    }
+
+    // overridden toString() method
+    public String toString() {
+        return myNumber.toString();
+    }
+
+}
+
+public class Test {
+    public static void main(String[] args) {
+        // Declare Container with String type argument
+        Container<String> c1 = new Container<>("Hello");
+
+        // Declare Container with String type argument
+        Container<Integer[]> c2 = new Container<>(new Integer[]{1, 2, 3, 4});
+
+        // Declare Container with UnknownError type argument
+        Container<UnknownError> c3 =
+                new Container<>(new UnknownError("Testing"));
+
+        CardboardContainer<String> n1 =
+                new <Integer>CardboardContainer<String>(12);
+                                               // <String> must match with the type in left assigning CardboardContainer<String> n1
+//        CardboardContainer<String> n2 =
+//                new CardboardContainer<>(3); // here the compiler confuse which constructor to call, u can fix tis by changing generic method type from T to V,... /********** TRICKY ********/
+
+        CardboardContainer<String> n3 =
+                new <Number>CardboardContainer(3); // notice here its a compiler error bcoz u passing 3 which is Number, and left diamond u declaring it as String
+        // which is Not Number ot subtype of Number, to fix this it must be Number or subtype of Number like Integer....
+
+    }
+}
+
+class CardboardContainer<T> {
+    T myField;
+
+    CardboardContainer(T myField) {
+        System.out.println("In T constructor");
+        this.myField = myField;
+    }
+
+    // generic method and T here is different from T declared in myField, thats why u cant assign it to this,myField....            /************ TRICKY ***********/
+    <T extends Number> CardboardContainer(T myField) {
+        System.out.println("In T2 constructor");
+        //this.myField = myField;
+    }
+
+}
+
+------------------------------
+TRICKY QUESTION #1:
+
+Given the following code:
+
+public class Test {
+    public static void main(String[] args) {
+        List<Long> list1 = new ArrayList<Long>(); // Line 1
+        list1.add(5);   // Line 2
+        List<? extends Number> list2 = null;  // Line 3
+
+        if (list1 instanceof List<?>) { // Line 4
+            list2 = list1;      // Line 5
+        }
+
+        System.out.println(list2);
+    }
+}
+What is the result of compiling and executing this code?
+
+compiler error at line 2:
+The literal 5 will get autoboxed to an Integer which is NOT a Long, so this line of code does not compile.
+Changing the literal to 5L would resolve the compile error.
+
+----------------------------------------
+TRICKY QUESTION #2:
+
+Given the code sample:
+
+public class Test {
+    public static void main(String[] args) {
+        Test test = new Test();
+        List<? extends Number> items =
+                new ArrayList<Integer>(Arrays.asList(1, 2, 3));  // Line 1
+        /*  Insert statement here */
+
+    }
+
+    public <T> void printItOut(T type) {
+        System.out.println(type);
+    }
+}
+Which of the following statements can be inserted at /* Insert Here */ in the code sample above so that the code compiles and outputs:  [1, 2, 3]
+
+
+
+A.   test.printItOut(items);
+
+B.   test.<Object>printItOut(items);
+
+C.   test.<List<?>>printItOut(items);
+
+D.   test.<? extends List>printItOut(items);
+
+E.   test.<List<? extends Number>>printItOut(items);
+
+
+correct answer is : all statements except D:
+You can NOT use a wild card as a type argument for a generic method.
+You’ll note that the statements represented by C and E use a type argument of type List - and the List has a type argument with wildcards which is permissable.
+
+-----------------------------------------------------------------------------------
+###################### Collections
+
+1- Collection interface is the base for all other interfaces with the exception of Map.
+2- all interfaces in the collection are generic.
+
+Collection -> Set
+                -> SortedSet
+           -> List
+           -> Queue
+           -> Deque
+
+Map -> SortedMap
+
+3- Here are some notes about collections:
+  - List: its ordered and allow duplicate elements and allow null values.
+  - Map:  its not ordered and no duplicate keys allowed and key cannot be null but value can be null.
+  - Set: its not ordered and no duplicate elements and accept only one null value.      /************** TRICKY **************/
+  - Queue: its ordered and allow duplicate elements ,and does not allow null value (LinkedList is queue that does allow null values).
+  - Deque: its ordered and allow duplicate elements, and does not allow null values.
+
+
+############## Traversing a collection
+we can do thro:
+1- using iterator(),
+   collection.iterator()
+
+2- using foreach method, default method in collection
+   collection.forEach((s) -> println("hello"));
+
+3- using enhanced loop
+
+######################### 1- Set
+1- duplicate elements are not allowed.
+2- two set instances are equal if they contain the same elements.
+
+Set Types:
+1- HashSet implements Set :
+   unpredictable iteration order, single null elements is allowed.
+2- TreeSet implements NavigableSet:
+   Natural order or by use of Comparator constructor, NO NULL ELEMENTS ALLOWED.
+3- LinkedHashSet extends HashSet implements Set:
+   Predictable iteration order, ordered by insertion order, single null elements is allowed.
+
+example about HashSet, TreeSet and LinkedHashSet below:
+
+
+import java.util.*;
+
+public class Test {
+
+    public static void main(String[] args) {
+        // Initialize some data
+        List<Integer> initialData = List.of(10, 20, 50, 40, 30);
+
+        // Create a set from this list, best practice to declare variables
+        // to the interface type as shown here.
+        Set<Integer> h = new HashSet<>(initialData);
+        System.out.println("----------- HashSet -----------");
+        /************
+         * 1- order of the elements is unpredictable.
+         * 2- single null value is allowed.
+         * 3- duplicate values are not allowed in hashSet , add method will return false if attempts to insert duplicate element.
+         * ***************/
+        System.out.println("Original values entered: " + initialData);
+
+        // Call static method on CollectionTests to exercise the Collections methods
+        doStuffWithCollection(h, 60, 50, 10);
+
+        Set<Integer> t = new TreeSet<>(initialData);
+        System.out.println("\n----------- TreeSet -----------");
+        /*******
+         * 1- ordered numerically .
+         * 2- does not allow null elements.
+         * 3- does not allow duplicate elements, adding duplicate will return false if the element being added is already found in list.
+         * 4- all other methods execute similarly to hashSet.
+         * ***********/
+        System.out.println("Original values entered: " + initialData);
+        doStuffWithCollection(t, 60, 50, 10);
+
+        Set<Integer> l = new LinkedHashSet<>(initialData);
+        System.out.println("\n----------- LinkedHashSet -----------");
+        /************
+         * 1- its ordered by the insertion order of the elements.
+         * 2- single null elements is allowed in LinkedHashSet.
+         * 3- does not allow duplicate elements,
+         *
+         * ***************/
+        System.out.println("Original values entered: " + initialData);
+        doStuffWithCollection(l, 60, 50, 10);
+
+
+        // even thod h and t has different implementations, but we can still compare between them since they all implements Set.
+        // if u try to add h.add(null); then it will not be equal...
+        if (h.equals(t)) {
+            System.out.println("HashSet h is equal to TreeSet t");
+        } else {
+            System.out.println("HashSet h is NOT equal to TreeSet t");
+        }
+    }
+
+    public static <T> void doStuffWithCollection(Collection<T> h,
+                                                 T addedValue1, T addedValue2,
+                                                 T removedValue) {
+        // Check if adding a null is valid or throws exception
+        System.out.println("Start of method: " + h);
+        try {
+            System.out.println("After adding null " +
+                    h.add(null) + " : " + h);
+        } catch (Exception e) {
+            System.out.println("Exception adding null: " +
+                    e);
+        }
+
+        // Add an element
+        System.out.println("After adding " + addedValue1 +
+                " " + h.add(addedValue1) + " : " + h);
+
+        //  Check if adding duplicate element is valid
+        System.out.println("After adding " + addedValue2 +
+                " " + h.add(addedValue2) + " : " + h);
+
+        // Remove an element
+        System.out.println("After removing  " + removedValue +
+                " " + h.remove(removedValue) + " : " + h);
+
+        try {
+            System.out.println("After removing null " +
+                    h.remove(null) + " : " + h);
+        } catch (Exception e) {
+            System.out.println("Exception removing null " +
+                    e);
+        }
+
+        // Test bulk functions
+        if (addedValue1 instanceof String) {
+            performBulkFunctionsString((Collection<String>) h);
+        } else if (addedValue1 instanceof Integer) {
+            performBulkFunctions((Collection<Integer>) h);
+        }
+
+    }
+
+    // Bulk functions with Integers
+    private static void performBulkFunctions(Collection<Integer> h) {
+        // Perform some bulk functions...
+        System.out.println("After addSeveral:" +
+                h.addAll(List.of(5, 10, 15, 25, 25)) + " : " + h);
+        System.out.println("containAll(10, 20, 90, 100) : " +
+                h.containsAll(List.of(10, 20, 90, 100)) + " : " + h);
+        System.out.println("containAll(5, 10, 15, 20, 25) : " +
+                h.containsAll(List.of(5, 10, 15, 20, 25)) + " : " + h);
+        System.out.println("After removeSeveral:" +
+                h.removeAll(List.of(20, 30)) + " : " + h);
+        System.out.println("After retainAll:" +
+                h.retainAll(List.of(10, 20, 30, 40, 50, 90)) + " : " + h);
+
+    }
+
+    // Bulk functions with Strings
+    private static void performBulkFunctionsString(Collection<String> h) {
+        // Perform some bulk functions...
+        System.out.println("After addSeveral:" +
+                h.addAll(List.of("George", "Harry", "Isabel"))
+                + " : " + h);
+        System.out.println("containAll(Fred ,Harry, Isabel) : " +
+                h.containsAll(List.of("Fred", "Harry", "Isabel"))
+                + " : " + h);
+        System.out.println("containAll(Anne ,Harry, Isabel) : " +
+                h.containsAll(List.of("Anne", "Harry", "Isabel"))
+                + " : " + h);
+        try {
+            System.out.println("After removeSeveral:" +
+                    h.removeAll(List.of("Harry", "Isabel")) + " : " + h);
+        } catch (Exception e) {
+            System.out.println("Exception removing containAll " +
+                    e);
+        }
+
+        try {
+            System.out.println("After retainAll:" +
+                    h.retainAll(List.of("Barry", "Charles",
+                            "David", "Edward"))
+                    + " : " + h);
+        } catch (Exception e) {
+            System.out.println("Exception with retainAll " +
+                    e);
+        }
+
+    }
+}
+
+5- TreeSet functions:
+   - lower, floor, ceiling , higher
+
+import java.util.*;
+
+public class Test {
+
+    public static void main(String[] args) {
+        // Initialize some data
+        List<Integer> initialData = List.of(10, 20, 50, 40, 30);
+        Set<Integer> t = new TreeSet<>(initialData);
+
+        System.out.println("\n----- Additional TreeSet Methods -------");
+
+        // cast t to a TreeSet variable to invoke TreeSet methods
+        TreeSet<Integer> treeSet = (TreeSet<Integer>) t;
+
+        // lower returns the greatest element < (less than) the parameter
+        // value or null if no smaller element exists
+        System.out.println("Using lower with values (1, 10, 20, 50, 51): "
+                + treeSet.lower(1) + " : "
+                + treeSet.lower(10) + " : "
+                + treeSet.lower(20) + " : "
+                + treeSet.lower(50) + " : "
+                + treeSet.lower(51));
+
+        // floor returns the greatest element <= (less than or equal to) the
+        // parameter value or null if no smaller element exists
+        System.out.println("Using floor with values (1, 10, 20, 50, 51): "
+                + treeSet.floor(1) + " : "
+                + treeSet.floor(10) + " : "
+                + treeSet.floor(20) + " : "
+                + treeSet.floor(50) + " : "
+                + treeSet.floor(51));
+
+        // ceiling returns the least element >= (greater than or equal to)
+        // the parameter value or null if no greater element exists
+        System.out.println("Using ceiling with values (1, 10, 20, 50, 51) : "
+                + treeSet.ceiling(1) + " : "
+                + treeSet.ceiling(10) + " : "
+                + treeSet.ceiling(20) + " : "
+                + treeSet.ceiling(50) + ": "
+                + treeSet.ceiling(51));
+
+        // higher returns the least element > (greater than) the parameter
+        // value or null if no greater element exists
+        System.out.println("Using higher with values (1, 10, 20, 50, 51): "
+                + treeSet.higher(1) + " : "
+                + treeSet.higher(10) + " : "
+                + treeSet.higher(20) + " : "
+                + treeSet.higher(50) + " : "
+                + treeSet.higher(51));
+    }
+}
+
+* Performance for hashSet and TreeSet:
+HashSet is faster than TreeSet.
+HashSet is Implemented using a hash table. TreeSet takes O(Log n) for search,
+insert and delete which is higher than HashSet. But TreeSet keeps sorted data
+
+######################### 2- List
+1- List is ordered and allows positional index access.
+2- List allows duplicate elements and null elements.
+3- ArrayList and LinkedList implements List interface.
+4- sublist in list is a view of the original list,
+   so any modification on the sublist will be also reflected on the original
+   list too.
+   but if lets say u try to add/remove value on the original list and then try
+   to print or use the sublist then u will get concurrent modification exception.
+
+import java.util.*;
+
+public class Test {
+    public static void main(String[] args) {
+
+        List<String> originalList = new ArrayList<>(List.of("One", "Two", "Three", "Four", "Five", "Six"));
+        List<String> subList = originalList.subList(0, 3);
+
+        System.out.println("Original List = " + originalList);
+        System.out.println("SubList = " + subList); // [One, Two, Three]
+
+        originalList.set(0, "One-1");
+
+        System.out.println("Original List = " + originalList);
+        System.out.println("SubList = " + subList); // [One-1, Two, Three]
+
+        originalList.add(1, "one-2");
+
+        System.out.println("Original List = " + originalList); // [One-1, one-2, Two, Three, Four, Five, Six]
+        System.out.println("SubList = " + subList); // java.util.ConcurrentModificationException
+
+    }
+}
+
+######################### 3- Queue and Deque
+1- queue usually ordered first in first out.
+2- first element is head, last element is tail.
+3- queue does not allow null element                /************ TRICKY ***********/
+4- queue allows duplicate elements.
+5- queue methods:      /*********** MEMORIZE ************/
+   - add(E):
+      insert element and return true,false or IllegateStateException
+      add element to back of queue.
+   - offer(E):
+      insert element and return true,false
+      add element to back of queue.
+   - element():
+      it will return head of element.
+      it will throw exception if queue is empty.         /********** TRICKY **********/
+   - peek():
+      it will retrieve element (it wont delete it)
+      it will retrieve head of element, or null if queue is empty.
+   - remove():
+     it will retrieve and remove the element
+     it will throw exception if queue is empty           /*********** TRICKY ************/
+   - poll():
+     it will retrieve and remove the element
+     null if the queue is empty.
+
+
+- Deque:          /*********** MEMORIZE ************/
+double ended queue
+it support insert and remove from both head and tail.
+it FIFO and LIFO
+deque methods:
+  - push(E):
+    returns void and add element to head of queue
+  - pop():
+    return and remove the first element in queue.
+  - addFirst(E):
+    return void
+  - addLast(E):
+    return void
+  - offerFirst(E):
+    return true/false
+  - offerLast(E):
+    return true/false
+  - getFirst() / getLast()
+    it retrieve element without removing it,
+    throw exception if queue is empty.
+  - peekFirst()/peekLast()
+    it retrieve element without removing it,
+    null if queue is empty
+  - removeFirst()/removeLast():
+    it retrieve element and remove it,
+    exception if queue is empty.
+  - pollFirst()/pollLast():
+    retrieve element,
+    null if queue is empty.
+
+example below:
+run and observe the output closely
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 4: Generics and Collections
+Topic:  Collections, Queue: ArrayDeque, LinkedList
+*/
+
+import java.util.*;
+
+public class Test {
+
+    public static void main(String[] args) {
+        List<Integer> initialData = List.of(10, 20, 50, 40, 30);
+
+        System.out.println("\n----------- ArrayDeque -----------");
+        System.out.println("Original values entered: " + initialData);
+
+        Queue<Integer> arrayQueue = new ArrayDeque<>(initialData);
+        Queue<Integer> linkedList = new LinkedList<>(initialData);
+
+        System.out.println("\n----------- ArrayDeque -----------");
+        System.out.println("Additional Methods, initialData : "
+                + arrayQueue);
+        testBasicQueueMethods(arrayQueue);
+
+        System.out.println("\n----------- LinkedList -----------");
+        System.out.println("Additional Methods, initialData : "
+                + linkedList);
+        testBasicQueueMethods(linkedList);
+
+        System.out.println("\n----------- ArrayDeque -----------");
+        System.out.println("Deque Methods, initialData : "
+                + arrayQueue);
+
+        testDequeMethods((ArrayDeque<Integer>) arrayQueue);
+
+        System.out.println("\n----------- LinkedList -----------");
+        System.out.println("Deque Methods, initialData : "
+                + linkedList);
+
+        testDequeMethods((LinkedList<Integer>) linkedList);
+    }
+
+    public static void testBasicQueueMethods(Queue<Integer> q) {
+
+        //  Add elements using both add and offer
+        System.out.println("After add(100) : " +
+                q.add(100) + " : " + q);
+
+        System.out.println("After offer(101) : " +
+                q.offer(101) + " : " + q);
+
+        try {
+            System.out.println("After offer(null) : " +
+                    q.offer(null) + " : " + q);
+        } catch (Exception e) {
+            e.printStackTrace(System.out);
+        }
+
+        // Retrieve an element using element or peek
+        System.out.println("element() returns : " +
+                q.element() + " : " + q);
+
+        System.out.println("peek() returns : " +
+                q.peek() + " : " + q);
+
+        // Retrieve and remove an element from the queue
+        // using poll and remove
+        System.out.println("poll() returns : " +
+                q.poll() + " : " + q);
+
+        System.out.println("remove() returns : " +
+                q.remove() + " : " + q);
+    }
+
+    // The following methods work both with Deque and LinkedList
+    public static void testDequeMethods(Deque q) {
+
+        // Dequeue has a push method that adds element to the head
+        // of the queue (opposite of add and offer)
+        q.push(199);
+        System.out.println("After push(199) : " + q);
+
+        // Dequeue has a pop method that retrieves element at
+        // the head of the queue (opposite of remove/poll
+        System.out.println("pop() returns : " +
+                q.pop() + " : " + q);
+
+        // Adding Methods, addFirst, offerFirst, addLast, offerLast
+        q.addFirst(200);
+        System.out.println("After addFirst(200) : " + q);
+
+        System.out.println("After offerFirst(201) : " +
+                q.offerFirst(201) + " : " + q);
+
+        q.addLast(300);
+        System.out.println("After addLast(300) : " + q);
+
+        System.out.println("After offerLast(301) : " +
+                q.offerLast(301) + " : " + q);
+
+        // Retrieval Methods, getFirst, getLast, peekFirst, peekLast
+        System.out.println("getFirst() returns : " +
+                q.getFirst() + " : " + q);
+
+        System.out.println("getLast() returns : " +
+                q.getLast() + " : " + q);
+
+        System.out.println("peekFirst() returns : " +
+                q.peekFirst() + " : " + q);
+
+        System.out.println("peekLast() returns : " +
+                q.peekLast() + " : " + q);
+
+        // Removal methods, pollFirst, pollLast, removeFirst, removeLast
+        System.out.println("pollFirst() returns : " +
+                q.pollFirst() + " : " + q);
+
+        System.out.println("pollLast() returns : " +
+                q.pollLast() + " : " + q);
+
+        System.out.println("removeFirst() returns : " +
+                q.removeFirst() + " : " + q);
+        System.out.println("removeLast() returns : " +
+                q.removeLast() + " : " + q);
+    }
+}
+
+######################### 2- Map
+1- map implement type java.util.Map.Entry and have key and value.
+2- cannot contain duplicate key, null is valid key for hashMap only.
+3- compute, merge and replaceA;; methods can be used with lambda expressions,
+   note: that all of these methods have BiFunction param with exception of computeIfAbsent.
+
+
+example:
+important to run and observe the results:
+
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class Test {
+
+    public static void main(String[] args) {
+        // Create three maps with String keys and Integer values.
+        Map<String, Integer> h = new HashMap<>();
+        Map<String, Integer> t = new TreeMap<>();
+        Map<String, Integer> l = new LinkedHashMap<>();
+
+        String[] names = new String[]{"Barry",
+                "George", "Harold", "Ida", "John"};
+
+        // Fill the map with some data, using put.
+        for (int i = 0; i < names.length; i++) {
+            h.put(names[i], (i + 1));
+            t.put(names[i], (i + 1));
+            l.put(names[i], (i + 1));
+        }
+
+        // Test if null keys and null values are allowed
+        Map<String, Integer> currentMap;
+        for (int i = 0; i < 3; i++) {
+            if (i == 0) currentMap = l;
+            else if (i == 1) currentMap = h;
+            else currentMap = t;
+            try {
+                // Insert map entry with a null value
+                currentMap.put("NullValue", null);
+
+                // Insert map entry with a null key
+                currentMap.put(null, 12);
+
+            } catch (Exception e) {
+                System.out.println(currentMap.getClass().toGenericString() +
+                        " does not support null keys");
+                System.out.println(e.toString());
+
+            }
+        }
+
+        // Print out data, the entire set, then each element of set.
+        System.out.println("--- HashMap: " + h);
+        h.entrySet().forEach((s) ->
+                System.out.println(s.getClass().getName() + " : " + s));
+
+        // Print out data, the entire set, then each element of set.
+        System.out.println("--- TreeMap: " + t);
+        t.entrySet().forEach((s) ->
+                System.out.println(s.getClass().getName() + " : " + s));
+
+        // Print out data, the entire set, then each element of set.
+        System.out.println("--- LinkedHashMap: " + l);
+        l.entrySet().forEach((s) ->
+                System.out.println(s.getClass().getName() + " : " + s));
+
+        System.out.println("\n---- LinkedHashMap: do Simple Stuff -------");
+        doSimpleMapStuff(l);
+
+        System.out.println("\n--- LinkedHashMap: test compute methods ---");
+        // Simplify map
+        l.remove("NullValue");
+        l.remove(null);
+        l.remove("Maggie");
+        testComputes(l);
+
+    }
+
+    private static void doSimpleMapStuff(Map<String, Integer> m) {
+        System.out.println("The value of m.get(Jane)) = "
+                + m.get("Jane") + " : " + m);
+        System.out.println("The value of m.get(John)) = "
+                + m.get("John") + " : " + m);
+
+        // Does map exist?
+        System.out.println("Map contains a key 'Barry'?: " +
+                m.containsKey("Barry") + " : " + m);
+        // Does value exist
+        System.out.println("Map contains a value '7'?: " +
+                m.containsValue(7) + " : " + m);
+
+        // Replacing values - Always replaces value for NullValue to 77
+        System.out.println("m.replace(NullValue, 77): " +
+                m.replace("NullValue", 77) + " : " + m);
+
+        // Replaces value in Barry to 10 if current value is 1,
+        // returns true
+        System.out.println("m.replace(Barry, 1, 10): " +
+                m.replace("Barry", 1, 10) + " : " + m);
+
+        // Replaces value in Barry to 11 if current value is 7,
+        // returns false because value in Barry is not 7
+        System.out.println("m.replace(Barry, 7, 11): " +
+                m.replace("Barry", 7, 11) + " : " + m);
+
+        // Simple removal by key
+        System.out.println("remove(Ida): " + m.remove("Ida")
+                + " : " + m);
+
+        // Conditional removal by key if value matches second argument
+        System.out.println("remove(Harold, 10) : " + m.remove("Harold", 10)
+                + " : " + m);
+
+        // Conditional removal by key if value matches second argument
+        System.out.println("remove(Harold, 3) : " + m.remove("Harold", 3)
+                + " : " + m);
+
+        // putIfAbsent adds Key/Value if key doesn't exist
+        System.out.println("putIfAbsent(Harold, 8) : " +
+                m.putIfAbsent("Harold", 8) + " : " + m);
+
+        // put always updates the Harold value
+        System.out.println("put(Harold, 100) : " +
+                m.put("Harold", 100) + " : " + m);
+
+        // putIfAbsent will not update Harold if it exists
+        System.out.println("putIfAbsent(Harold, 200) : " +
+                m.putIfAbsent("Harold", 200) + " : " + m);
+
+        // putIfAbsent will insert Maggie with value of 200
+        System.out.println("putIfAbsent(Maggie, 200) : " +
+                m.putIfAbsent("Maggie", 200) + " : " + m);
+    }
+
+    private static void testComputes(Map<String, Integer> m) {
+        System.out.println("Original State: " + m);
+        // If John exist and value is not null, apply function
+        m.compute("John", (key, val) -> (val == null) ? 0 : val * 100);
+        System.out.println("compute(John, val*100): " + m);
+
+        // Add new entry and see default value 0
+        //Ilene does not exist
+        m.compute("Ilene", (key, val) -> (val == null) ? 0 : val * 100);
+        System.out.println(m.values());
+
+        m.put("John", null);
+        System.out.println("Set value in John to null: " + m);
+        // If value in John entry is null, NullPointer Exception thrown.         /*************** TRICKY **********/
+        m.compute("John", (key, val) -> (val == null) ? 0 : val * 100);
+        System.out.println(m);
+
+        // You can use following methods without try catch...
+        int defaultVal = 30;
+
+        // Mary will get added with value result of computation
+        System.out.println("Mary gets added with value = " +
+                m.computeIfAbsent("Mary", (val) -> defaultVal * 3));
+        System.out.println("m.computeIfAbsent(Mary, (30) * 3): " + m);
+
+        // Mary exists, no computation made, value left unchanged
+        System.out.println("Mary value is unchanged = " +
+                m.computeIfAbsent("Mary", (val) -> defaultVal * 3));
+        System.out.println("m.computeIfAbsent(Mary, (30) * 3): " + m);
+
+        // Mary exists, computation made and value updated
+        System.out.println("Mary gets updated using computeIfPresent" +
+                " with value = " +
+                m.computeIfPresent(
+                        "Mary", (key, val) -> val * 3));
+        System.out.println("m.computeIfPresent(Mary, (val) * 3): " + m);
+
+        // Ralph does not exist, and does not get added.
+        System.out.println("Ralph does not exist, computeIfPresent " +
+                " does nothing = " +
+                m.computeIfPresent(
+                        "Ralph", (key, val) -> {
+                            System.out.println("code is executed");
+                            return val * 3;
+
+                        }));
+        System.out.println("m.computeIfPresent(Ralph, (val) * 3): " + m);
+
+    }
+}
+
+---------------------
+map merge
+
+example below:
+run and execute the following code:
+
+/*
+The Learn Programming Academy
+Java SE 11 Developer 1Z0-819 OCP Course - Part 2
+Section 4: Generics and Collections
+Topic:  Collections, Map: HashMap, TreeMap, LinkedHashMap
+*/
+
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class Test {
+
+    public static void main(String[] args) {
+        // Create three maps with String keys and Integer values.
+        Map<String, Integer> h = new HashMap<>();
+        Map<String, Integer> t = new TreeMap<>();
+        Map<String, Integer> l = new LinkedHashMap<>();
+
+        String[] names = new String[]{"Barry",
+                "George", "Harold", "Ida", "John"};
+
+        // Fill the map with some data, using put.
+        for (int i = 0; i < names.length; i++) {
+            h.put(names[i], (i + 1));
+            t.put(names[i], (i + 1));
+            l.put(names[i], (i + 1));
+        }
+
+        testMerges(l);
+
+    }
+
+    private static void testMerges(Map<String, Integer> m) {
+
+        System.out.println("----------------- merge --------------------");
+
+        System.out.println("Original State: " + m);
+        //  If Mary exists and is not null, use the function
+        System.out.println("After merge(Mary,100,val/3), return value : " +
+                m.merge("Mary", 100, (key, val) -> val / 3));
+        System.out.println("After merge(Mary,100,val/3): " + m);
+
+        System.out.println("After put(Mary, null), return value : " +
+                m.put("Mary", null));
+        System.out.println("After put(Mary, null); " + m);
+
+        // If Mary exists, and value is null, use the value, not the function
+        System.out.println("After merge(Mary,100,val/3), return value : " +
+                m.merge("Mary", 100, (key, val) -> val / 3));
+        System.out.println("After merge(Mary,100,val/3): " + m);
+
+        // If Mary exists, and value is not null , use the function
+        System.out.println("After merge(Mary,100,val/3), return value : " +
+                m.merge("Mary", 100, (key, val) -> val / 3));
+        System.out.println("After merge(Mary,100,val/3): " + m);
+
+        // If Mary exists, and return value of the function is null, Mary
+        // gets removed from map
+        System.out.println("After merge(Mary,100,null), return value : " +
+                m.merge("Mary", 100, (key, val) -> null));          /**************** TRICKY ****************/
+        System.out.println("After merge(Mary,100,null): " + m);
+
+        // If Nat does not exist, use the value, not the function
+        System.out.println("After merge(Nat,100,val*2), return value : " +
+                m.merge("Nat", 100, (key, val) -> val * 2));
+        System.out.println("After merge(Nat,100,val*2): " + m);
+
+        m.put("Barry", null);
+        System.out.println("Set value in Barry to null: " + m);
+        m.replaceAll((key, val) -> {
+            if (val == null) return 0;
+            else return val + 1;
+        });
+        System.out.println("replaceAll: null values get 0, " +
+                "otherwise add 1 to existing value: " + m);
+    }
+}
+
+
+NOTE:                         /************************ TRICKY **************/
+we cant use add/remove from map entrySet, keySet and values event with mutable map....
+
+example:
+
+assume we have mutable map tMapCopyMutable:
+tCopyMutable.entrySet().add(Map.entry("John",35)); // it will show runtime error unsupported operation exception
+
+example below:
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Use Map.of to populate a Map, with comma delimited values
+        // representing key1, value1, key2, value2 etc.
+        Map<String, Integer> treeMap = new TreeMap<>(Map.of(
+                "Mary", 30,
+                "John", 35,
+                "Ralph", 23,
+                "George", 15,
+                "Kate", 50));
+        System.out.println("Initial Values: " + treeMap);
+        // This returns a modifiable View of the Map, however, you
+        // cannot add entries.
+        Set entrySet = treeMap.entrySet();
+        entrySet.remove("John");
+        System.out.println(treeMap);
+
+        entrySet.remove(Map.entry("John", 25));
+        System.out.println(treeMap);
+
+        entrySet.remove(Map.entry("John", 35));
+        System.out.println(treeMap);
+
+        // Collection of just the values...
+        Collection<Integer> values = treeMap.values();
+        values.remove(23);
+        System.out.println(treeMap);
+
+        // Collection of just the keys
+        Collection<String> keySet = treeMap.keySet();
+        keySet.remove("Mary");
+        System.out.println(treeMap);
+
+        // Add some more values to original Map.
+        treeMap.putAll(Map.of(
+                "Carol", 5,
+                "Martha", 46,
+                "Mark", 33));
+        System.out.println(treeMap);
+        System.out.println("Size of keySet Set: " + keySet.size());
+
+        Iterator iterator = treeMap.entrySet().iterator();
+
+        // as we can see if we change in the view it will be also reflected in the original map treeMap...
+        // BUT if u iterator the map and change the origianl list then try to use next to traverese on map then it will show exception
+        // java.util.ConcurrentModificationException.
+
+        // u fix fix the error but moving iterator after the retainAll....
+        keySet.retainAll(Set.of("Carol", "Kate", "Mary", "Andrew"));
+        System.out.println(treeMap);
+
+        for(String key: keySet) { // this will also show java.util.ConcurrentModificationException bcoz u are altered the original Map using view (keySet), so u cant iterate it....
+            treeMap.put("Ralph", 33);
+        }
+
+        while (iterator.hasNext()) {
+            System.out.println(iterator.next());
+        }
+
+        Map<String, Integer> tCopyMutable =
+                new TreeMap<>(Map.copyOf(treeMap));
+        tCopyMutable.put("Tom", 30);
+        System.out.println(tCopyMutable);
+
+        Map<String, Integer> tCopyImmutable = Map.copyOf(treeMap);
+//        tCopyImmutable.put("Tom", 30);
+        System.out.println(tCopyImmutable);
+
+        tCopyMutable.put("Ralph", 25);
+        System.out.println(tCopyMutable);
+        // cant add / remove from entrySet, keySet and values.... event if collection is mutable...
+        tCopyMutable.entrySet().add(Map.entry("John", 35));         /************* TRICKY **********/
+
+
+        Map<String, Integer> immutableMap = Map.ofEntries(
+                Map.entry("Joe", 5),
+                Map.entry("John", 10),
+                Map.entry("James", 15));
+        System.out.println(immutableMap);
+
+        tCopyMutable.putAll(Map.ofEntries(
+                Map.entry("Martha", 15),
+                Map.entry("Carol", 35)));
+        System.out.println(tCopyMutable);
+        tCopyMutable.computeIfPresent("Martha", (key, val) -> val * 100);
+        System.out.println(tCopyMutable);
+    }
+}
+------------------------
+views on collections:
+modifying the view will also modify the original collection,
+list below:
+1- Arrays.asList(T... a):
+   return fixed list size. (it will throw unsupported exception if u try to add/remove bcoz array is fixed size).
+2- entrySet():
+   return set view of the mappings contained in this map.
+3- keySet():
+   returns set om the keys.
+4- values():
+   returns values contained in this map.
+5- subList:
+   contains elements from index inclusive to index exclusive.
+
+example about #1:
+
+public class Test {
+    public static void main(String[] args) {
+
+        String[] arr = {"one", "two", "three", "four"};
+        List<String> list = Arrays.asList(arr);
+
+        System.out.println(list.size());
+
+        list.add("five"); // ava.lang.UnsupportedOperationException
+
+    }
+}
+-----------------------------------------
+
+tricky questions            /************* TRICKY **********/
+
+public class Test {
+    public static void main(String[] args) {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        map.put("Ralph", 55);
+
+        map.merge("Ralph", 1, Test::mergeFunction);  // Line 1
+        map.merge("Ros", 56, Test::mergeFunction);  // Line 2
+        System.out.println(map);
+
+    }
+
+    static Integer mergeFunction(Integer i1, Integer i2) {
+        if (i2 < 55) return null;
+        return i1 + i2;  // Line 3
+    }
+}
+
+correct answer:
+code compiles and shows: {Ros=56}
+Ralph exists so the mergeFunction method is executed, and null is returned from it,
+so Ralph (i2 is used to test against < 55 and i2 in the instance of Ralph entry is 1, NOT 55), so Ralph is removed from the map.
+
+-------------------------
+
+public class Test {
+    public static void main(String[] args) {
+        Deque<String> deque = new ArrayDeque<>();
+        deque.addLast("first");
+        deque.addFirst("last");
+
+        System.out.print(deque.element() + " " + deque.pop() + " ");   // Line 1
+        deque.poll();
+        System.out.print(deque.poll() + " ");  // Line 2
+        System.out.print(deque.peek());  // Line 3
+    }
+}
+
+code compiles and output: last last null null
+The element at the head of the queue is ‘last’ and not ‘first’.
+The element() method returns the element at the head, but leaves it there. The pop() method removes and returns the element at the head of the queue.
+The poll method is then executed but it’s return value is not printed ('first').
+The other two methods (poll() and peek()) return a null value when a queue is empty.
+
+--------------------------
+
+/******************** TRICKY ************************/
+
+import java.util.Map;
+import java.util.TreeMap;
+
+public class Test {
+    public static void main(String[] args) {
+        Map<String, Integer> treemap = new TreeMap<>();
+
+        // Ralph a new employee
+        int employeeNo = 1;
+        treemap.compute("Ralph",
+                (s1, s2) -> (s2 == null) ? employeeNo : s2 + 1);  // Line 1
+
+        int s2 = 3;  // Line 2
+
+        // Anne a  new employee
+        treemap.compute("Anne",
+                (s1, s3) -> (s1 == null) ? employeeNo + 1 : s2 + 1);  // Line 3
+
+        System.out.println(treemap);
+
+    }
+}
+
+output is:
+{Anne=4, Ralph=1}
+Ralph’s value is evaluated to 1 (s2 is the value which is null because Ralph entry did not exist),
+so the value is set to employeeNo (1). In addition, Anne is added to the map, s1 has the value ‘Anne’ so is not null,
+therefore the value for the ‘Anne’ key is set to employeeNo +1. If the code had used a increment operator (++) on employeeNo,
+this would have been a compile time error. In addition, a TreeMap is ordered using natural Order, which is alphabetical for Strings.
+
+----------------------------------------------------------------------
+######### Comparator and Comparable
+Comparable:
+meant to provide something called natural order for sorting and natural comparison method,
+when comparing one object to another.
+
+Comparator:
+used to sort in other ways than the natural order if a class implements Comparable
+or to sort object that dont implement Comparable at all.
+
+public interface Comparable<T> {
+    public int compareTo(T o);
+}
+
+where:
+1- if bother objects are equal it will return 0;
+2- if current object less than the argument return negative.
+3- if current object more than the argument return positive.
+
+public interface Comparator<T> {
+    int compare(T o1, T o2);
+}
+
+Comparator has the following static methods:           /*************** MEMORIZE **************/
+
+1- comparing.
+2- comparingDouble.
+3- comparingInt.
+4- comparingLong.
+5- naturalOrder().
+6- reverseOrder.
+7- nullFirst.
+8- nullLast.
+
+*** Comparable example:
+
+
+import java.util.Set;
+import java.util.TreeSet;
+
+// Class orders dogs by how smart they are claimed to be
+class SmartDog implements Comparable<SmartDog> {
+
+    // dogType determines smart Factor
+    private DogType dogType;
+
+    // Constructor takes a dog type
+    public SmartDog(DogType t) {
+        this.dogType = t;
+    }
+
+    // Overrides Comparable compareTo method with custom implementation
+    public int compareTo(SmartDog o) {
+        System.out.println("Comparing " + this + " with argument " + o +
+                " = " + (this.dogType.smartLevel - o.dogType.smartLevel));
+        return this.dogType.smartLevel - o.dogType.smartLevel;
+    }
+
+    public String toString() {
+        return this.dogType.toString();
+    }
+
+    // Enum represents how smart dogs are from 1 to 6, 6 being the dumbest
+    public enum DogType {
+        POODLE(1),
+        LABRADOODLE(2),
+        COLLIE(3),
+        LABRADOR(4),
+        PUG(5);
+
+        // default dogs to dumbest level
+        int smartLevel = 6;
+
+        DogType(int smartLevel) {
+            this.smartLevel = smartLevel;
+        }
+
+    }
+
+}
+
+// Class tests which dogs are the smartest
+public class Test {
+    public static void main(String[] args) {
+        System.out.println("-----TreeSet start constructing -------");
+        Set<SmartDog> dogSet = new TreeSet<>(
+                Set.of(
+                        new SmartDog(SmartDog.DogType.COLLIE),     /************** TRICKY ***********/ the SmartDog MUST implement Comparable if u want to use it with TreeSet,
+                                                                  // if u remove Comparable from SmartDog then it will show java.lang.ClassCastException
+                        new SmartDog(SmartDog.DogType.LABRADOODLE),
+                        new SmartDog(SmartDog.DogType.PUG),
+                        new SmartDog(SmartDog.DogType.POODLE),
+                        new SmartDog(SmartDog.DogType.LABRADOR))
+        );
+
+        System.out.println("-----TreeSet constructed-------");
+        System.out.println("Sorted Dogs " + dogSet);
+
+                // notice here for the list the results is not sorted, even tho SmartDog implemented Comparable interface
+                List<SmartDog> list = new ArrayList<>(Arrays.asList(new SmartDog(SmartDog.DogType.COLLIE), //******** TRICKY *************/
+                        new SmartDog(SmartDog.DogType.LABRADOODLE),
+                        new SmartDog(SmartDog.DogType.PUG),
+                        new SmartDog(SmartDog.DogType.POODLE),
+                        new SmartDog(SmartDog.DogType.LABRADOR)));
+
+                System.out.println("------------ list constructed -------------");
+                System.out.println("Sorted Dogs "+ list);
+    }
+}
+
+*** Comparator Example:
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
+// Create a comparator to sort names using last names
+class LastNameComparator implements Comparator<String> {
+
+    // Do not want natural order, want to sort by the last name if one
+    // exists. Assume no titles and suffixes in the names
+    public int compare(String o1, String o2) {
+        // Deal with nulls
+        if (o1 == null || o2 == null) return -1;
+
+        // Split names on whitespace
+        String[] names1 = o1.split("\\s");
+        String[] names2 = o2.split("\\s");
+
+        // Assumption is last String is the last name, leverage
+        // compareTo method of String which implements Comparable
+        return names1[names1.length - 1].compareTo(names2[names2.length - 1]);
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create an array of different names to test the compare method
+        String[] names = {
+                "Ralph Smith",
+                "Martha G. Jones",
+                "Anne Margaret Caroline Green",
+                "Owen White",
+                "Irene Funk",
+                "Philip",
+                "Joe Ford"};
+
+        System.out.println("------ Unsorted initial List ------");
+        for (String name : names) {
+            System.out.println(name);
+        }
+
+        // Uses natural order... Strings implement Comparable
+        Arrays.sort(names);
+        System.out.println("------ Arrays.sort(String[]) ------");
+
+        for (String name : names) {
+            System.out.println(name);
+        }
+
+        // Use collections class, ArrayList
+        List<String> namesList = new ArrayList<>(List.of(names));
+        System.out.println("------ Sorted initial List ------");
+        namesList.forEach(System.out::println);
+
+        // Use static method reverseOrder on Comparator to sort
+        namesList.sort(Comparator.reverseOrder());
+        System.out.println("---- List.sort(Comparator.reverseOrder()) ----");
+        namesList.forEach(System.out::println);
+
+        // Use static method naturalOrder on Comparator to sort
+        namesList.sort(Comparator.naturalOrder());
+        System.out.println("---- List.sort(Comparator.naturalOrder()) ----");
+        namesList.forEach(System.out::println);
+
+        // Create instance of custom Comparator
+        LastNameComparator l = new LastNameComparator();
+
+        // Passing custom Comparator to List.sort
+        namesList.sort(l);
+        System.out.println("--- ArrayList.sort(LastNameComparator) ---");
+        namesList.forEach(System.out::println);
+
+        // Passing custom Comparator to Arrays.sort.
+        Arrays.sort(names, l);
+        System.out.println("-- Arrays.sort(String[], " +
+                "LastNameComparator) --");
+        namesList.forEach(System.out::println);
+
+        // Comparator interface has a reversed() default method
+        namesList.sort(l.reversed());
+        System.out.println("--- ArrayList.sort(" +
+                "LastNameComparator.reversed()) ---");
+        namesList.forEach(System.out::println);
+
+        //  Add a null value to the ArrayList
+        namesList.add(null);
+        namesList.sort(l);
+        System.out.println("--- ArrayList.sort(" +
+                "LastNameComparator) with null ---");
+        namesList.forEach(System.out::println);
+
+        // Comparator interface has static methods which are helpful,
+        // such as allowing control over where nulls end up in sorted list
+        // you can list nulls first
+        namesList.sort(Comparator.nullsFirst(l.reversed()));
+        System.out.println("--- ArrayList.sort(Comparator." +
+                "nullsFirst(reversed))) ---");
+        namesList.forEach(System.out::println);
+
+        // you can list nulls last
+        namesList.sort(Comparator.nullsLast(l.reversed()));
+        System.out.println("--- ArrayList.sort(Comparator." +
+                "nullsLast(reversed))) ---");
+        namesList.forEach(System.out::println);
+    }
+}
+
+*** Comparing Example:
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+// Person class with firstName & lastName
+class Person {
+    private String firstName;
+    private String lastName;
+
+    // Constructor takes both arguments
+    Person(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    // Getters
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    // toString method
+    public String toString() {
+        return "Person{" +
+                "firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                '}';
+    }
+}
+
+// Sorting without using either a custom Comparator or a Comparable.
+public class Test {
+    public static void main(String[] args) {
+
+        // Creating a list of person.
+        List<Person> people = new ArrayList<>(List.of(new Person("George", "Ball"),
+                new Person("Cathy", "Hart"),
+                new Person("Anne", "Ball"),
+                new Person("Marty", "Hart")));
+
+        // sort in a multi-dimensional way, using methods (getters here)
+        // chaining the static methods on Comparator
+        // it will sort based on last name then first name
+        people.sort(
+                Comparator.comparing(Person::getLastName)
+                        .thenComparing(
+                                Comparator.comparing(Person::getFirstName)));
+
+        people.forEach(System.out::println);
+    }
+}
+
+NOTE: (Comparable VS Comparator)
+1- Any class implementing the interface becomes sortable in collections that are sorted
+   True for Comparable
+   False for Comparator
+
+2- Method names:
+   Comparable compareTo
+   Comparator compare
+
+3- Comparable is in java.lang
+   Comparator is in java.util
+
+4- Comparable does not have default methods.
+   Comparator has default methods.
+
+5- Comparator generally used to order objects in an additional way than natural ordering.
+
+--------------------------------------------------------
+######## some other collections methods
+1- when u use Collections.copy, the destination size must be bigger than the source.
+   Collections.copy(des, src);
+
+example below:
+
+import java.util.*;
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        // Create an ArrayList passing the results of
+        // Collections.singletonList.
+        List<String> l2 = new ArrayList<>(Collections.singletonList("One"));
+        l2.add("Four");
+        l2.add("Four2");
+        List<String> l1 = new ArrayList<>(List.of("Two", "Three"));
+        // l2 is the dest.
+        // l1 is src
+        // l2 size must be >= l1
+        Collections.copy(l2, l1);                            /*********** TRICKY *********/
+        System.out.println("Copied List using Collections.copy : " + l2);
+        l2.add("Five");
+        System.out.println("After adding Five : " + l2);
+
+        //List<String> l1 = new ArrayList<>(List.of("Two", "Three"));
+        Collections.copy(l1, l2);
+        System.out.println("Copied List using Collections.copy : " + l1);
+        l1.add("Five");
+        System.out.println("After adding Five : " + l1);
+
+        List<String> immutableList = Collections.nCopies(10, null);
+        System.out.println("Collections.nCopies(10, null) : "
+                + immutableList);
+
+        List<String> mutableList = new ArrayList<>(Collections.nCopies(10, null));
+        mutableList.set(0,"something");
+        System.out.println("new ArrayList<>(Collections.nCopies(10, null) : "
+                + mutableList);
+
+    }
+}
+
+-------------------------------------------
+out of ordinary :
+1- TreeSet:
+   its ordered using natural ordering, and require elements that pass to it to implement comparable.
+   you can reconfigure this by passing Comparator to the constructor of TreeSet.
+
+   //TreeSet Constructor:
+   - TreeSet() no args.
+   - TreeSet(Collection<? extends E> c)
+   - TreeSet(Comparator<? super E> comparator)
+   - TreeSet(SortedSet<E> s)
+
+Note:              /************ TRICKY **********/
+Collections do not accept single data elements in the constructor, but single elements can be passed
+using static methods such as List.of and Arrays.asList
+
+example about TreeSet constructors:
+
+
+import java.util.*;
+
+// Class implements both Comparable & Comparator
+class TreeElement implements
+        Comparable<TreeElement>, Comparator<TreeElement> {
+
+    private int id;
+    private String value;
+
+    // Constructor
+    public TreeElement(int id, String value) {
+        this.id = id;
+        this.value = value;
+    }
+
+    // overriding Comparable.compareTo
+    public int compareTo(TreeElement o) {
+        // "Natural Order" = sorted by id ascending
+        return this.id - o.id;
+    }
+
+    // overriding Comparator.compare
+    public int compare(TreeElement o1, TreeElement o2) {
+        // Order by value - descending, assume for now value is not null
+        return o2.value.compareToIgnoreCase(o1.value);
+    }
+
+    public String toString() {
+        return "{" +
+                "id=" + id +
+                ", value='" + value + '\'' +
+                '}';
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getValue() {
+        return value;
+    }
+}
+
+// Test TreeSet ordering with Comparable and Comparator
+public class Test {
+    public static void main(String[] args) {
+
+        List<TreeElement> setTestData = List.of(
+                new TreeElement(2, "Sam"),
+                new TreeElement(5, "Carol"),
+                new TreeElement(1, "Mary"),
+                new TreeElement(10, "Tim"));
+
+        // Create TreeSet passing data to constructor and print data
+        //TreeSet<TreeElement> treeSet = new TreeSet<>(Comparator.comparing(TreeElement::getId).reversed());
+        //TreeSet<TreeElement> treeSet = new TreeSet<>(Comparator.comparing(TreeElement::getId));
+
+        //NOTE: bcoz TreeElement implement Comparator then passing setTestData in constructor here means passing Comparator          /*********** TRICKY ************/
+        TreeSet<TreeElement> treeSet = new TreeSet<>(setTestData.get(1));
+
+        treeSet.addAll(setTestData);
+        System.out.println("---- TreeSet Values ----");
+        treeSet.forEach(System.out::println);
+        System.out.println("---- Element lower than Sam ----");
+        System.out.println(treeSet.lower(setTestData.get(0)));
+
+    }
+}
+
+
+----------------------------
+out of ordinary wildcard:
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+// Test TreeSet ordering with Comparable and Comparator
+public class Test {
+    public static void main(String[] args) {
+
+        // Here a float literal can be assigned to a double variable
+        double d = 32.0f;
+
+        // Here a float literal can be part of array initialization for
+        // a double array
+        double[] doubleArray = new double[]{32.0f};
+
+        System.out.println("Primitive assignment, float to double: "
+                + d);
+        System.out.println("Primitive array initialization assignment," +
+                " float to double: " + Arrays.toString(doubleArray));
+
+        // An autoboxed float -> Float cannot be assigned to a Double
+        Double wrapper= 32.0f;                /************** TRICKY ************/
+
+        // An array of double wrappers cannot be initialized to array
+        // of primitive float
+        Double[] wrappedArray = new Double[]{32.0f};                 /************** TRICKY ************/
+
+        // A List of float literals cannot be passed to constructor of Double
+        List<Double> doubleList = new ArrayList<Double>(List.of(32.2));
+
+        // Cannot add a literal float to a List of Double
+        List<Double> doubleList2 = new ArrayList<Double>();
+        doubleList2.add(32.2);
+
+        // Typing only on the assignment side does not place compiler error
+        // restrictions on elements added.
+        List numberList = new ArrayList<Integer>();
+        numberList.add("Hello");
+        numberList.add(3.2f);
+        numberList.add(List.of("a", "b"));
+
+        List<?> integerList1 = new ArrayList<Integer>();
+        integerList1.add(1); // compiler error bcoz ? could be Exception
+
+        List<? super Integer> integerList2 = new ArrayList<Integer>();
+        integerList2.add(5);
+        integerList2.add((int) 10L);
+
+                                                                              /******************* TRICKY ****************/
+        List<? extends Integer> integerList3 = new ArrayList<Integer>(); // integerList3 could reference to Short, thats why we cant add 1 bcoz it will be auto boxed to integer..
+        integerList3.add(Integer.valueOf(1));
+        // useful explanation:
+        // https://stackoverflow.com/questions/2776975/how-can-i-add-to-list-extends-number-data-structures
+
+
+    }
+}
+
+-------------------------------------------------------------------
+
+/*********************** TRICKY *****************/
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test<T> {
+
+    /****
+     *
+     * all declarations below will show a compiler error, including raw list:
+     * 1- List<?> wrappedList;
+     * List<Object> wrappedList;
+     * List<? extends T> wrappedList;
+     * List<? super T> wrappedList;
+     * List wrappedList;
+     *
+     * ***********/
+    // Container wraps an ArrayList
+    List<? super T> wrappedList;
+
+    // Constructor
+    Test(List<? super T> wrappedList) {
+        this.wrappedList = wrappedList;
+    }
+
+    // Wrap get method with custom one
+    public T myGet(int index) {
+        return  wrappedList.get(index); // Required T and provided Object
+    }
+
+    // Wrap add method with custom one
+    public void myAdd(T o) {
+        wrappedList.add(o);
+    }
+
+    // Wrap ArrayList.toString()
+    public String toString() {
+        return wrappedList.toString();
+    }
+
+    // Main method declares and constructs an instance
+    public static void main(String[] args) {
+//        List<CharSequence> l = new ArrayList<>();
+//        GenericContainer<CharSequence> g = new GenericContainer<>(l);
+
+        List<CharSequence> l = new ArrayList<>(
+                List.of(new StringBuilder("bye")));
+        Test<String> g = new Test<>(l);
+
+        // Add elements to wrapped List
+        g.myAdd("hi");
+
+        // Get first element from wrapped List
+        String o = g.myGet(0);
+        System.out.println("Element 0 = " + o);
+
+        // Print List
+        System.out.println("Wrapped List = " + g);
+    }
+
+}
+
+----------------------------------------------------
+
+tricky questions:                     /************* TRICKY **************/
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+
+
+    public static void main(String[] args) {
+
+        List<Number> list = new ArrayList<Integer>();  // Line 1 , Compiler error, THEY BOTH MUST BE THE SAME TYPE
+        // either both are Number or both are integer,,,,
+
+        list.add(10L); // Line 2
+        list.add(10.0); // Line 3
+        list.add(10); // Line 4
+        System.out.println(list);
+    }
+
+}
+
+You cannot assign an ArrayList<Integer> to a variable declared with the type List<Number>.
+Note that if you had typed both with <Number>, the code would have compiled and executed, outputting [10, 10.0, 10].
+If you had typed both with <Integer>, the code would have had compiler errors on Line 2 and Line 3, since you cannot add a primitive long (autoboxed to Long)
+or a primitive double (autoboxed to Double) to an ArrayList<Integer>.
+
+-----------------------------------------------------
+
+
+tricky questions:                     /************* TRICKY **************/
+
+Which of the five methods compiles?
+getListB only
+
+since the local variable is defined with a lower bound, the compiler can rest assured that any list assigned to
+this variable will not be more specific, so adding a Number (or subtype of Number) is ok.
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Test {
+    public List getListA() {
+        List<? extends Number> list = new ArrayList<>();
+        list.add(10);
+        return list;
+    }
+
+    public List getListB() {
+        List<? super Number> list = new ArrayList<>();
+        list.add(10);
+        return list;
+    }
+
+    public List getListC() {
+        List<?> list = new ArrayList<>();
+        list.add(10);
+        return list;
+    }
+
+    public List getListD() {
+        List<Long> list = new ArrayList<Long>();
+        list.add(10);
+        return list;
+    }
+
+    public List getListE() {
+        List<Number> list = new ArrayList<Integer>();
+        list.add(10);
+        return list;
+    }
+}
+
+
+-----------------------------------------------------
+
+tricky questions:                     /************* TRICKY **************/
+
+
+import java.util.*;
+
+class Item implements Comparator<Item> {
+    private int id;
+
+    Item(int id) {
+        this.id = id;
+    }
+
+    int compareTo(Item i) {
+        return i.id - this.id;
+    }
+
+    public int compare(Item o1, Item o2) {
+        return o1.id - o2.id;
+    }
+
+    public String toString() {
+        return "" + id;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        List<Item> testData = List.of(
+                new Item(20),
+                new Item(10),
+                new Item(15)
+        );
+        List<Item> itemList = new ArrayList<>(testData);  // Line 1
+        Collections.sort(itemList);     // Line 2 , it will show compiler error
+
+        Set<Item> treeSet = new TreeSet(new Item(0));   // Line 3
+        treeSet.addAll(testData);
+        Item i1 = treeSet.iterator().next();      // Line 4
+
+        System.out.println(i1);
+    }
+}
+
+The class Item implements Comparator but not Comparable. Only List elements implementing Comparable can be sorted.
+

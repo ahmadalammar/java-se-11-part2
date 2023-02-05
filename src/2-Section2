@@ -1,0 +1,880 @@
+##################################### JAVA Fundamentals #########################
+
+######### classes and interfaces and enum...
+
+1- protected and private and public only valid for nested types...
+2- static modifier not valid for top level class.
+3- its okay to add modifier in different order
+
+example:
+
+abstract public class Test {
+}
+
+and
+
+public abstract class Test {
+}
+
+4- cannot override final method.
+
+example:
+
+class Parent {
+
+    public final void methodA(){
+
+    }
+}
+
+public class Test extends Parent {
+    // with or without final in method below u cant override final method from parent
+    public /*final*/ void methodA(){
+
+    }
+}
+
+5- if we have abstract method and sub-class override this method and declare it as final
+   then its fine and NOT compiler error...
+
+example:
+
+abstract class Parent {
+
+    public abstract void methodA();   // *********  TRICKY remember to add abstract keyword in non-complete method,
+    // otherwise, its a compiler error...
+
+}
+
+public class Test extends Parent {
+    @Override
+    public final void methodA() { // its okay to add final keyword in subclass overrided method    /************ TRICKY ***********/
+
+    }
+}
+
+
+-------------------------------------
+######### Nested classes
+There are two types of nested classes:
+1- static nested class.
+2- non static nested class also called an inner class.
+   - inner member class - can be fields, methods , class , interface.
+   - local inner class defined withing a block of code.
+
+
+3- static nested class example :
+important Note:
+u cant reference to instance field/method from static nested class...
+
+// Enclosing Class
+public class Test {
+    // instance field on enclosing class
+    public String outerName = "outer";
+
+    // static field on enclosing class
+    public static String staticOuterName = "OUTER";
+
+    // static method on enclosing class
+    public static void doSomethingStatically() {
+        System.out.println("doSomethingStatically invoked.");
+        // invoke nested class's method via class reference
+        NestedStaticClass.getStaticName();
+    }
+
+    // instance method on enclosing class
+    public void doSomethingOnInstance() {
+        System.out.println("doSomethingOnInstance invoked.");
+        // invoke nested class's method via instance reference
+        new NestedStaticClass().getInstanceName();
+        NestedStaticClass.getInstanceName(); // compiler error, bcoz getInstanceName() is not static....
+    }
+
+    // Begin declaration of static nested class named NestedStaticClass
+    public static class NestedStaticClass {
+        // static field
+        public static String staticName = "NestedStaticClass.staticName";
+
+        // instance field
+        public String instanceName = "NestedStaticClass.instanceName";
+
+        // static method
+        public static String getStaticName() {
+            return "getStaticName() = " + NestedStaticClass.staticName;
+        }
+
+        // instance method
+        public String getInstanceName() {
+            System.out.println(outerName); // compiler error, cant reference instatnce variable from static nested class....
+            // to fix this, either u make class non static or make variable as static....
+            doSomethingOnInstance(); // compiler error, cant reference instance method from static nested class....
+
+            return "getInstanceName() = " + this.instanceName;
+        }
+
+        // note: static in enum and interface inside a static nested class is redundant....
+        public /*static*/ enum Colors {               /*********** TRICKY ************/
+            RED, BLUE, YELLOW
+        }
+
+        // note: static in enum and interface inside a static nested class is redundant....
+        public static interface NestedInterface {
+
+        }
+    }  // Ends declaration of the static nested class
+
+}
+
+// This class tests the EnclosingClass and it's nested class
+// from disassociated class.
+class TestEnclosingClass {
+
+    public static void main(String[] args) {
+        // Reference static field on static nested class directly:
+        System.out.println(Test.NestedStaticClass.staticName);
+
+        // Reference static method on static nested class directly:
+        System.out.println(Test.NestedStaticClass.getStaticName());
+
+        // Reference enum on static nested class directly:
+        System.out.println(Test.NestedStaticClass.Colors.BLUE);
+
+        // Local variable declaration using a nested class's interface
+        Test.NestedStaticClass.NestedInterface n;
+
+    }
+}
+
+-------------------------------------------------------
+###### non static inner member class
+
+
+// Enclosing Class
+public class Test {
+
+    // Add Constructor
+    Test(String name) {
+        this.outerName = name;
+    }
+
+    // instance field on enclosing class
+    public String outerName = "outer";
+
+    InnerMemberClass innerMemberClass = new InnerMemberClass();
+
+    // instance method on enclosing class
+    public void doSomethingOnInstance() {
+        System.out.print("doSomethingOnInstance invoked: ");
+        // invoke nested class's method via class reference
+        System.out.println(new InnerMemberClass().getInstanceName());
+    }
+
+    // Begin declaration of inner member class named InnerMemberClass
+    public class InnerMemberClass {
+
+        // instance field
+        public String instanceName = "InnerMemberClass.instanceName";
+
+        // instance method
+        public String getInstanceName() {
+            return "getInstanceName() = " + this.instanceName;
+        }
+
+        public String getOuterName() {
+            return "InnerMemberClass.getOuterName() = " + outerName; // notice here we can access outerName, unlike static inner class we could not access instance variable....
+
+        }
+
+    }  // Ends declaration of the inner member class
+
+}
+
+// This class tests the EnclosingClass and it's inner member class
+// using a disassociated class.
+class TestEnclosingClass {
+
+    public static void main(String[] args) {
+        Test e = new Test("e's Instance");
+        e.doSomethingOnInstance();
+
+        // We can declare a local variable of the inner class, and init it directly like this:
+        Test.InnerMemberClass i = new Test("Test").new InnerMemberClass();
+        // or like the code below:
+        // You must use the instance new operator, much like a method.
+        i = e.new InnerMemberClass();
+
+        // Use local variable referencing the inner member class to
+        // access method on the inner class
+        System.out.println("Invoking i.getOuterName: " + i.getOuterName());
+
+        // Create another instance of the Enclosing Class
+        Test f = new Test("f's Instance");
+
+        // Declare and Assign a variable to the inner member class of
+        // new instance in a single statement
+        Test.InnerMemberClass j = f.new InnerMemberClass();
+        System.out.println("Invoking j.getOuterName: " + j.getOuterName());
+
+        // u cant access inner class from variable name, u must use Class name in order to access it....
+        e.InnerMemberClass.instanceName = "Testing";                    /************** TRICKY ***************/
+        System.out.println(e.InnerMemberClass.getInstanceName());       /************** TRICKY ***************/
+
+        // the code below is OKAY bcoz we're accessing instance variable NOT the class
+        e.innerMemberClass.instanceName = "Testing";                    /************** TRICKY ***************/
+        System.out.println(e.innerMemberClass.getInstanceName());       /************** TRICKY ***************/
+    }
+}
+
+
+
+IMPORTANT NOTE!!!!!!            /**************** TRICKY ************/
+- u cant have static members inside non-static inner class...
+- for static final FIELDS AND ONLY FIELDS its okay and no compiler errors....
+- u cant add enum or interface to inner class as both enum and interface implicitly static...
+
+example below:
+
+public class Test {
+
+    // Begin declaration of inner member class named InnerMemberClass
+    public class InnerMemberClass {
+
+        // instance field
+        public String instanceName = "InnerMemberClass.instanceName";
+
+        // compiler error
+        public static String getInstanceName() {
+            return "getInstanceName() = " + this.instanceName;
+        }
+
+        // compiler error
+        public static final String getOuterName() {
+            return "InnerMemberClass.getOuterName() = " ;
+
+        }
+
+        public static String NAME="TEST1"; // compiler error
+        public static final String NAME_CONSTANT="TEST2"; // OKAY !!!      /*************** SUPER TRICKY !!! **************/
+
+        // OKAY
+        public class inner2 {
+
+        }
+
+        // compiler error
+        public enum Colors {
+
+        }
+
+        // compiler error
+        public interface NestedInterface {
+
+        }
+
+    }  // Ends declaration of the inner member class
+
+}
+
+
+another example of shadowing fields in inner class...
+
+
+// Enclosing Class
+public class Test {
+
+    // Add Constructor
+    Test(String name) {
+        this.outerName = name;
+    }
+
+    // instance field on enclosing class
+    public String outerName = "outer";
+
+    // instance field of the type of the inner class
+    public InnerMemberClass innerMemberClass = new InnerMemberClass();
+
+    // instance method on enclosing class
+    public void doSomethingOnInstance() {
+        System.out.print("doSomethingOnInstance invoked: ");
+        // invoke nested class's method via class reference
+        System.out.println(new InnerMemberClass().getInstanceName());
+    }
+
+    // Begin declaration of inner member class named InnerMemberClass
+    public class InnerMemberClass {
+
+        // instance field
+        public String instanceName = "InnerMemberClass.instanceName";
+
+        // instance method
+        public String getInstanceName() {
+            return "getInstanceName() = " + this.instanceName;
+        }
+
+        public String getOuterName() {
+            return "InnerMemberClass.getOuterName() = " +
+                    Test.this.outerName; // this is how we access field from outer class...
+        }
+
+        // static field
+        public static final String staticName = "staticName";
+
+        public String outerName = "outer"; // this will shadow the outerName in outer class Test....
+
+    }  // Ends declaration of the inner member class
+
+}
+
+// This class tests the EnclosingClass and it's inner member class
+// using a disassociated class.
+class TestEnclosingClass {
+
+    public static void main(String[] args) {
+        Test e = new Test("e's Instance");
+        e.doSomethingOnInstance();
+
+        // We can declare a local variable of the inner class
+        Test.InnerMemberClass i;
+
+        // You must use the instance new operator, much like a method.
+        i = e.new InnerMemberClass();
+
+        // Use local variable referencing the inner member class to
+        // access method on the inner class
+        System.out.println("Invoking i.getOuterName: " + i.getOuterName());
+
+        // Create another instance of the Enclosing Class
+        Test f = new Test("f's Instance");
+
+        // Declare and Assign a variable to the inner member class of
+        // new instance in a single statement
+        Test.InnerMemberClass j = f.new InnerMemberClass();
+        System.out.println("Invoking j.getOuterName: " + j.getOuterName());
+
+        e.innerMemberClass.instanceName = "Testing";
+        System.out.println(e.innerMemberClass.getInstanceName());
+    }
+}
+
+---------------------------------------------------------------------
+############## Local class
+
+- in local class we can read local method variables but we cant assign value to it, it must be final or effective final..
+- in local class we can read outer class variables and assign value to it.
+- once u set value to local variable in a method and u try to use it in local class, u cant change this local variable.... see REF-01
+- inner local class cannot accept static members.. (same as inner instance class)
+- inner local class cannot accept interface and enum bcoz they are implicitly static (same as inner instance class)
+
+public class Test {
+
+    private String defaultName = "Jane";
+    private String lastName = "Doe";
+
+    // Creating a non-static method that declares a local class
+    private void methodWithLocalClass() {
+
+        String defaultName = "Ralph";
+
+        //defaultName ="anoter value"; // notice if u uncomment this it will show compiler error in LocalClass constructor...      /********* TRICKY *******/
+        // LocalClass Only has scope within this method
+        class LocalClass {
+            // local class can have all the same members as an outer class
+            // (with the exception of static members).
+            private String name;
+
+            // Constructor on local class
+            private LocalClass(String name) {
+                if (name == null) {
+                    this.name = defaultName; // notice here we can read the value from outer method, but we cannot assign value to it ...
+                                             // once we set value to defaultName we cant change it, if we try to change the defaultName in
+                                             // methodWithLocalClass method then we will get error.....
+                    //defaultName="test"; // compiler error, it must be final...
+
+                    // Test.this.defaultName="test"; // we can read and assign value from outer class
+
+                } else {
+                    this.name = name;
+                }
+                this.name += " " + Test.this.lastName;
+            }
+
+            private void performSomeAction() {
+                System.out.println("LocalClass.name = " + name);
+
+            }
+
+            // compiler error
+            public static void testStaticMethod() {
+
+            }
+
+            // compiler error
+            interface nestedInterface {
+
+            }
+
+            // compiler error
+            enum nestedEnum {
+
+            }
+        }
+
+        // Create multiple instances of local class within
+        // the enclosing code's scope..
+
+        // notice: that even the constructor is private in local class we can still access it from within the method.....
+        LocalClass jeff = new LocalClass("Jeff"); /****************** TRICKY **************/
+        LocalClass martha = new LocalClass("Martha");
+        LocalClass bob = new LocalClass("Bob");
+
+        // Execute methods on instances of the local class
+        jeff.performSomeAction();
+        martha.performSomeAction();
+        bob.performSomeAction();
+
+        // Access fields directly from instance of local class
+        // notice: that even the bob.name is private in local class we can still access it from within the method.....
+        System.out.println("Bob's name is: " + bob.name);
+
+        new LocalClass(null).performSomeAction();
+    }
+
+    public static void main(String[] args) {
+        new Test().methodWithLocalClass();
+    }
+}
+
+1- we can create local abstract class.
+2- local class can also extend other class and implement interfaces.
+3- cant reference instance variable from static:
+
+public class Test {
+
+    String name="Alammar";
+
+    public static void main(String[] args) {
+        class A {
+            public void methodA() {
+                System.out.println("my name="+name); // cant refer instance variable from static method...
+                System.out.println(Test.this.name); // cant refer instance variable from static method...
+            }
+        }
+    }
+}
+
+---------------------------------------------------
+######## Anonymous class
+structure of anonymous class:
+
+new ParentClassType() {
+  class body;
+}
+
+new InterfaceType() {
+  class body;
+}
+
+
+Things u cant declare in anonymous class:        /************ memorize ************/
+1- Constructors.
+2- static fields.
+3- static initializers.
+4- static method.
+5- member interfaces and enum.
+
+example about anonymous class:
+
+abstract class AnAbstractClass {
+    int i;
+
+    protected abstract void doSomething();
+}
+
+interface Doable {
+    void doSomething();
+}
+
+public class Test {
+    String name = "Default";
+
+    public void testAnonymous() {
+
+        // 1- Declare a variable of type AnAbstractClass and immediately
+        //     define the class body, try to comment out doSomething() in AnAbstractClass, then u will hit a compiler error when u invoke a.doSomething();
+        AnAbstractClass a = new AnAbstractClass() {
+            // Implementing the abstract method on AnAbstractClass
+            public void doSomething() {
+                System.out.println("Anonymous AnAbstractClass " +
+                        "will doSomething with " + i);
+            }
+        };  // Declaration occurs in an expression and must end with ';'
+
+        a.doSomething();
+
+        // 2- Anonymous class extending Object
+        Object b = new Object() {
+            public String toString() {
+                return "Anonymous object";
+            }
+        };
+
+        System.out.println(b);
+
+        // 3- Anonymous class implements interface Doable
+        new Doable() {
+            public void doSomething() {
+                System.out.println("Anonymous Doable " +
+                        "will doSomething with " + b);
+            }
+        }.doSomething();
+
+        // If you want to pass parameters to your anonymous
+        // class, you can extend abstract class using a local
+        // class
+        abstract class ConcreteClass extends AnAbstractClass {
+            ConcreteClass(int i) {
+                this.i = i;
+            }
+        }
+
+        // This example shows an anonymous class created with an
+        // instance initializer and passing a value to the constructor
+        AnAbstractClass c = new ConcreteClass(5) {
+            {
+                i = 2 * this.i;
+
+            }
+
+            public void doSomething() {
+                System.out.println("Anonymous AnAbstractClass " +
+                        "will doSomething with " + i);
+            }
+        };
+        c.doSomething();
+
+    }
+
+    public static void main(String[] args) {
+        new Test().testAnonymous();
+    }
+}
+
+--------------------------------------------------
+############# Enum
+
+1- enum is just a class that implicitly extend abstract class java.lang.Enum
+2- any enum cant extend another enum or class.           /************* TRICKY ************/
+3- u cant also explicitly extend java.lang.Enum.
+4- if u see extend clause used in enum then its a compiler error     /********* TRICKY *******/
+5- nested enum can be declared static but its redundant since nested enum type is implicitly static.        /******* TRICKY *******/
+6- its a compiler time error to declare enum as abstract.       /********* TRICKY **********/
+7- javap <class-name-compiled> to de-assemble the class
+8- enum can only have private or package-private constructors.
+
+enum simple example:
+
+enum WeekDays /*extends Object*/ {  // enum cant extend other classes
+    // The values after the constants enclosed in parentheses are
+    // the values used in the constructor(s)
+    SUNDAY("Sun", "Wonderful Weekend"),
+    MONDAY("Mon", "Long road ahead"),
+    TUESDAY("Tues", "Long road ahead"),
+    WEDNESDAY("Wed", "Hump day"),
+    THURSDAY("Thurs", "TGIF - 1"),
+    FRIDAY("Fri"),   // All constants need not execute same constructor
+    SATURDAY("Sat", "Wonderful Weekend");  // Semi-colon required if u have class fields and method members...
+    // if u have only the constants without any other members then its not required..                /************* TRICKY ************/
+
+
+    // You can define fields on an enum
+    String abbreviation;
+    String description = "TGIF";
+
+    // You can define zero to many constructors on an enum
+    /*public*/ WeekDays(String abbreviation) {     // cant declare as public             /******** TRICKY ********/
+        this.abbreviation = abbreviation;
+    }
+
+    WeekDays(String abbreviation, String description) {
+        this.abbreviation = abbreviation;
+        this.description = description;
+    }
+
+    public String printType() {
+        // Each enum gets a copy of this method, so each
+        // enum constant instance can be referred to as this.
+        if (this == SATURDAY || this == SUNDAY) return "Weekend";
+        return "Weekday";
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Loop through the list of values..
+        for (WeekDays day : WeekDays.values()) {
+            // You can access enum attributes from enum value
+            System.out.println(day.ordinal() + " is " + day.abbreviation +
+                    " (" + day.printType() + "): " + day.description);
+        }
+
+        // You can execute a method on the enum through a reference
+        // to one of the constants...
+        System.out.println(WeekDays.SATURDAY + " is a " +
+                WeekDays.SATURDAY.printType());
+    }
+}
+
+9- An abstract method defined in the enum body must be implemented by every enum constant.
+10- other methods can be declared in the enum constant body for use within the anonymous class of the constant, but will not be accessible outside of the enum.
+
+example about 9 and 10:
+
+/*****
+ * Notes:
+ *
+ * 1- all enum constants need to override abstract method : abstract public void describe();.
+ * 2- after enum constants we must add ;
+ * 3- eventho u add method as public in constant (printSomeAdditionalInfo() ), but that does not mean it can be accessed
+ *    from outside, only from within the constant itself                  /************** TRICKY ***********/
+ * *****/
+
+public enum Test {
+    // -- Begin the enum constants list
+    PINOCHLE(4) {
+        // describe() overrides abstract method declared in enum body
+        public void describe() {
+            System.out.println(this + ": Jack of Diamonds, Queen of Spades");
+        }
+        // Declaring a public method does not mean it will be
+        // accessible to the outside world...
+        public void printSomeAdditionalInfo() {
+            System.out.println("Two pinochles is rare and is 30 points");
+        }
+    },
+    MARRIAGE(2) {
+        // This method declared in an enum constant body block
+        int adjustScore() {
+            return 2;
+        }
+
+        // describe() overrides abstract method declared in enum body
+        public void describe() {
+            System.out.println(this + ": King and Queen of a single suit");
+        }
+    },
+    //..... ADDITIONAL ITEMS would go here ....
+    NINE_OF_TRUMP(1) {
+        // describe() overrides abstract method declared in enum body
+        public void describe() {
+            System.out.println(this + ": Nine of trump suit");
+        }
+    };  // Note the semi-colon here end of constants.
+
+    // -- Begin the enum body declaration
+    protected int score;
+
+    Test(int score) {
+        this.score = score;
+    }
+
+    // An enum body can have a concrete method which the enum constant
+    // bodies can optionally override.
+    int adjustScore() {
+        return 0;
+    }
+
+    // Method each constant would need to override...
+    abstract public void describe();
+}
+
+class PinochleGame {
+
+    // main method demonstrates use of an enum constant method
+    public static void main(String[] args) {
+        int count = 0;
+
+        // You can declare an array of the enum type...
+        Test[] hand = {
+                Test.PINOCHLE,
+                Test.MARRIAGE,
+                Test.NINE_OF_TRUMP};
+
+        // Loop through player's hand (represented by the array hand)
+        for (Test points : hand) {
+
+            // call method on the enum constant
+            points.describe();
+
+            // Add up scores using the adjustScore in the enum
+            // constant (if it overrides the one in the enum body.
+            count += (points.score + points.adjustScore());
+
+            // Accessing an enum constant's public method only allowed if
+            // the method is declared in enum body with appropriate modifiers
+            points.printSomeAdditionalInfo();                     /************** TRICKY ***************/
+        }
+
+        System.out.println("Example meld score = " + count);
+    }
+}
+
+------------------------------------------------------------
+######### out of ordinary part 1
+
+refer to section2.OuterMost.java
+         TestingInheritance.java
+
+------------------------------------------------------------
+######### out of ordinary part 2
+
+- local variable used in local class should be final or efficiently final,
+  and once u set u cant change its value...
+
+// Simple class demonstrating a local class in a method
+public class Test {
+
+    public static void main(String[] args) {
+
+        // Create a local variable and assign it a value
+        int efinal = 1; // cant change its value once u set... bcoz its effectively final..
+        // efinal = 2; // compiler error, even thos u assign value AFTER LocalClass declartion it will still shows a compiler error...
+
+
+        // Local Class created with a single method that
+        // uses the efinal local variable just created
+        class LocalClass {
+            public void printValue() {
+                System.out.println("efinal = " + efinal);
+                //efinal++; // compiler error
+            }
+        }
+
+        // efinal = 3; // compiler error
+
+        // Execute method on the local class
+        new LocalClass().printValue();
+    }
+}
+
+
+2- enum initialization order:         /************* TRICKY **********/
+
+enum PrimaryColor {
+    RED(1) {
+        {
+            // initializer for the individual class constants
+            System.out.println(this + " initialized");
+        }
+    },
+    BLUE(2) {
+
+        {
+            // initializer for the individual class constants
+            System.out.println(this + " initialized");
+        }
+    },
+    YELLOW(3) {
+        {
+            // initializer for the individual class constants
+            System.out.println(this + " initialized");
+        }
+    };
+
+    int rating = 0;
+
+    // static initializer for the PrimaryColor class (enum)
+    static {
+        System.out.println("Enum Class Initialization");
+    }
+
+    // initializer for all of the anonymous class constants
+    {
+        System.out.println("Enum Body Initialization for " + this);
+    }
+
+    // Constructor
+    PrimaryColor(int rating) {
+        System.out.println("Primary Color constructor for " + this);
+        this.rating = rating;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+
+        /********
+         * Notes:
+         * 1- static initializer called once only for all...(Enum Class Initialization).
+         * 2- just run this class and notice the order of the initializations.
+         * ******/
+        System.out.println(PrimaryColor.RED);
+        System.out.println(PrimaryColor.BLUE);
+        System.out.println(PrimaryColor.YELLOW);
+    }
+}
+
+
+3- remember that enum can implements interface...
+4- cant use super in enum constructor         /********** TRICKY *********/
+5- cant extend enum.
+
+/**********
+ * Notes:
+ * 1- the below code we have enum that implemenets interface...
+ *    - we can make SecondaryColors implement the method doIt() OR
+ *    - we can make each constant to implement the method. but they MUST ALL IMPLEMENT THIS METHOD.....               /******** TRICKY ************
+ *
+ *
+ * ***********/
+
+//  create an interface with a single method
+interface DoItInterface {
+    public void doIt();
+}
+
+// Declare an enum that implements an interface
+enum SecondaryColors implements DoItInterface {
+    ORANGE {
+        // If doIt is abstract or NOT declared at all in the enum body
+        // each constant must implement the method
+        public void doIt() {
+            System.out.println(this + " is implementing an interface's method ");
+        }
+    },
+    PURPLE {
+        // You can implement interface method in the enum constant body
+        public void doIt() {
+            System.out.println(this + " wants to be different");
+        }
+    },
+    GREEN {
+        // If doIt is abstract or NOT declared at all in the enum body
+        // each constant must implement the method
+        public void doIt() {
+            System.out.println(this + " is implementing an interface's method ");
+        }
+    };
+
+
+}
+
+public class Test {
+
+    // This method accepts an interface typed parameter
+    public void printData(DoItInterface o) {
+        o.doIt();
+    }
+
+    public static void main(String[] args) {
+        Test e = new Test();
+
+        // You can pass enum constants to a method that takes the
+        // interface typed parameter
+        e.printData(SecondaryColors.ORANGE);
+        e.printData(SecondaryColors.PURPLE);
+    }
+}
+
+-------------------------------------------------------------------------
+

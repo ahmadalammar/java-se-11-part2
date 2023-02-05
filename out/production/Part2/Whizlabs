@@ -1,0 +1,33 @@
+1-4 tricky
+
+https://stackoverflow.com/questions/50551920/where-to-use-resolve-and-relativize-method-of-java-nio-file-path-class
+
+1-18 tricky
+
+1-21 serialization
+usually the beahviour of writing object in file it will write all fields, however we can override
+this by add serialPPersistentFields to spesifcy what are the fields need to be writen in file...
+and it must be private static final.......
+
+1-22 tricky
+
+1-24 tricky
+
+1-28 tricky
+
+1-29 tricky
+
+1-30 tricky
+
+1-40 trickyyyyyyy
+
+1-48
+-----------------------
+
+2-3 tricky
+
+2-3
+
+2-15
+
+2-30

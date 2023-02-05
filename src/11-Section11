@@ -1,0 +1,114 @@
+############################# Service Provider (SPI) #########################
+spi interface consists of:
+1- service - set of interfaces and usually abstract classes.
+2- service provider interface
+3- service provider, the specific implementation of a service
+   the classes in a provider typically implement the interfaces.
+4- java.util.ServiceLoader
+   responsible of discovering and loading implementation on demand
+   and loading them in an internal cache.
+
+
+module test.spi with two public interfaces:
+
+public interface TestService {
+    void provideTheService();
+}
+public interface ExtendedTestService extends TestService {
+}
+And module test.impl with two provider classes:
+
+public class TestProvider implements test.spi.TestService {
+
+    public void provideTheService() {
+        System.out.println("TestProvider");
+    }
+}
+public class ExtendedTestProvider implements test.spi.ExtendedTestService {
+
+    public void provideTheService() {
+        System.out.println("ExtendedTestProvider");
+    }
+}
+Which two of the following module descriptors is valid?
+
+A.
+
+module test.impl {
+    requires test.spi;
+    provides test.spi.TestService with test.impl.TestProvider;
+    provides test.spi.TestService with test.impl.ExtendedTestProvider;
+}
+B.
+
+module test.impl {
+    requires test.spi;
+    provides test.spi.ExtendedTestService with test.impl.TestProvider;
+    provides test.spi.TestService with test.impl.ExtendedTestProvider;
+}
+C.
+
+module test.impl {
+    requires test.spi;
+    provides test.spi.TestService with test.impl.TestProvider;
+    provides test.spi.ExtendedTestService with test.impl.ExtendedTestProvider;
+}
+D.
+
+module test.impl {
+    requires test.spi;
+    provides test.spi.TestService with test.impl.TestProvider, test.impl.ExtendedTestProvider;
+}
+E.
+
+module test.impl {
+    provides test.spi.TestService with test.impl.TestProvider;
+    provides test.spi.ExtendedTestService with test.impl.ExtendedTestProvider;
+}
+
+Answer:
+1- Both A and B are invalid module descriptions. A is invalid because you cannot have two provides directives which specify the same type for the provides type.
+   B is invalid because the TestProvider class is does not implement ExtendedTestService.
+
+2- It’s true that C is a valid module descriptor but A is invalid because you cannot have two provides directives which specify the same type for the provides type.
+
+3- It’s true that D is a valid module descriptor but E is invalid because it is missing a requires directive for the module test.spi.
+
+4- t’s true that D is a valid module descriptor, but B is invalid because the TestProvider class is does not implement ExtendedTestService.
+
+Correct answer (C+D)
+
+------------------------------------------------------------------
+
+Which statement is true about a provider for a service
+
+* A.  An implementing provider class has to declare either an explicit public no args constructor or a public static no args provider method.
+
+* B.  An implementing provider class has to declare both an explicit public no args constructor and  a public static no args provider method.
+
+* C.  An implementing provider class always has to implement the Service interface or extend the Service class.
+
+* D.  An implementing provider class does not have to implement the Service interface or extend the Service class but if it does not, it must provide a public static no args provider method which returns an instance of the service type or a subclass of the service type.
+
+* E.  An implementing provider class always has to declare a public static no args provider method.
+
+* F.  All of the statements above are correct
+
+Answer:
+
+A ?
+ This statement would have been correct, if the statement had not specified an explicit public no args constructor.
+ If the class has no explicit constructor declared, an implicit default no args constructor is implied and is sufficient.
+
+B?
+This statement is incorrect. An implement provider class can declare both an explicit no args constructor
+and a public static no args provider method but the class only needs to have one of the following: an implicit default no args constructor,
+an explicitly declared public no args constructor OR a public static no args provider method.
+
+C?
+his statement is incorrect. An implementing provider class does NOT have to implement the Service interface or extend the Service class,
+if it declares a public static no args provides method that returns an instance of the service type or a subclass of the service type.
+
+D?
+its correct
+

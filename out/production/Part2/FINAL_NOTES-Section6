@@ -1,0 +1,58 @@
+1- /**********
+    * Notes:
+    *
+    * There are 4 kinds of method references in Java:
+    *
+    * ContainingClass::staticMethodName - reference to a static method
+       Calculable c1 = Test::executeSecondMethod; <---- just a method name mapping
+       c1.showIt(); <--- here is the execution, once we execute c1.showIt() it will actually trigger executeSecondMethod
+       note the method signature and return type must exactly match the function interface method signature....
+
+    * containingObject::instanceMethodName - reference to an instance method of a particular object
+        Test t = new Test();
+        Showable ss = t::testThirdMethod; // instance method and NOT static...
+        ss.showIt();
+    * ContainingType::methodName - reference to an instance method of an arbitrary object of a particular type
+    * ClassName::new - reference to a constructor
+    *
+    *
+    * *************/
+
+2- lets say we have functional interface:
+interface Calculable {
+    float calculate(float operand1, float operand2);
+}
+
+and we want to execute it using lambda or method reference:
+  - Calculable d1 = (Float op1, Float op2) -> op1 + op2; // it will show compiler error,  Cannot autobox/unbox with parameters in a lambda expression
+    d1.calculate(1,2);
+  - Calculable d2 = Test::executeSecondMethod; // we can see that using method reference are more forgiving for boxing and unboxing.... unlike lambda..
+    d2.calculate(1,2);
+
+// Cannot mix LVTI var with declared types
+// Calculable d2 = (var op1, float op2) -> op1 + op2;
+
+3- tricky example:
+
+
+below code we have 3 abstract methods, toString(), equals() is override from Object, so it still fullfill Functional Interface...
+
+// Interface with 3 abstract methods
+interface Functionable {
+
+    int function(int i1, int i2);
+
+    String toString();
+
+    boolean equals(Object o);
+}
+
+public class Test {
+    public static void main(String[] args) {
+        // Lambda Expression using Functionable interface, which implies
+        // Functionable interface is a function interface.
+        Functionable f = (s, t) -> s + t;
+        System.out.println(f.function(5, 5));
+        System.out.println(f.toString());
+    }
+}

@@ -1,0 +1,117 @@
+1- u cant use stream after it has being closed....
+
+2- once u build the stream u cant add items anymore...
+
+3-
+        Stream.Builder builder3 = Stream.builder();
+        builder3.add("a");
+        builder3.add(new Object());
+        Stream<String> s3 = builder3.build(); // java.lang.ClassCastException bcoz we have added Object then try to cast it string. (NOT COMPILER ERROR)
+        s3.forEach(System.out::println);
+
+4- Notice for Stream.of we can do self invoke again ....
+Notice:
+
+if u try to use stream.limit(2) it will thro exception, and u can fix this by doing self-invokation:
+stream = stream.limit(2); // this is OKAY
+but lets say we use terminal operation like forEach then try to do self-invoke then it will throw exception....
+
+import java.util.stream.Stream;
+
+public class Test {
+    public static void main(String[] args) {
+
+        // Create a Stream of Integer
+        Stream<Integer> stream = Stream.of(10, 20, 30);
+        // stream.limit(2); // java.lang.IllegalStateException: stream has already been operated upon or closed
+        // stream.forEach(System.out::println); // this is terminal operation , means u cant use stream after this anymore....
+
+        stream = stream.limit(2); // this is OKAY
+        stream.forEach(System.out::println);
+    }
+}
+
+------------------------------------------------
+5- Tricky question:
+
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Stream;
+
+/**********
+ * Concat method both param should be still open and not terminated
+ * Stream.concat(stream1 , stream2); // both stream1 and stream should not call any terminal operation before the concat,
+ *                                   // otherwise will show a java.lang.IllegalStateException: stream has already been operated upon or closed
+ *
+ *
+ *         Stream<String> merged = Stream.concat(stream1, stream2); // This is okay
+ *         Stream<String> newMerge = Stream.concat(stream1, stream2); // this will show ava.lang.IllegalStateException: stream has already been operated upon or closed
+ *                                                                    // bcoz u r already processing stream1 and stream2 in merged stream....
+ *
+ *         tree1.add("Zoe"); // adding item to source after merge concat
+ *
+ *         merged.forEach(System.out::println); // it will throw concurrent modification exception
+ *
+ * ****************/
+public class Test {
+    public static void main(String[] args) {
+
+        // Set up some test data
+        Set tree1 = new TreeSet(List.of("Ralph", "Larry", "Carol", "Mark"));
+        Set tree2 = new TreeSet(List.of("Mark", "Mary", "Maggie"));
+
+        // Print each set's elements
+        System.out.println("TreeSet orders naturally, " +
+                "print using Set.forEach --");
+        System.out.println("---First---");
+        tree1.forEach(System.out::println);
+        System.out.println("---Second---");
+        tree2.forEach(System.out::println);
+
+        System.out.println("TreeSet orders naturally, " +
+                "print using stream().forEach() --");
+
+        // Create streams for each Set, print each stream's elements
+//        Stream<String> stream1 = tree1.stream();
+//        stream1 = stream1.sorted(Comparator.reverseOrder());
+
+//        System.out.println("---First---");
+//        stream1.forEach(System.out::println);
+
+//        Stream<String> stream2 = tree2.stream();
+//        stream2 = stream2.filter(s-> s.charAt(s.length()-1) != 'y');
+
+        Stream<String> stream1 = tree1.stream();
+        stream1 = stream1.peek(s -> System.out.print("-- 1 -- "));
+
+        Stream<String> stream2 = tree2.stream();
+        stream2 = stream2.peek(s -> System.out.print("-- 2 -- "));
+
+//        System.out.println("---Second---");
+//        stream2.forEach(System.out::println);
+
+        System.out.println("---Merged---");
+        Stream<String> merged = Stream.concat(stream1, stream2);
+//        merged.forEach(System.out::println);
+
+//        merged.distinct().forEach(System.out::println);
+//
+        Stream<String> newMerge = Stream.concat(stream1, stream2);
+
+        merged = merged.distinct();
+
+//        Stream<String> newMerge = Stream.concat(stream1, Stream.of("Zoe", "Pete"));
+
+//        stream1 = stream1.sorted(Comparator.reverseOrder());
+
+        tree1.add("Zoe");
+
+        merged.forEach(System.out::println);
+    }
+}
+
+--------------------------------------------------------------
+

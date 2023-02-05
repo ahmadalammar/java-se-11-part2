@@ -1,0 +1,76 @@
+1- try-with-resource:
+   when an exception thrown from try block then it will first:
+   1- try to close the resource in opposite order.
+   2- catch the exception in catch block.
+   3- execute finally.
+
+2- assert syntax:
+  assert boolean:
+         string; // this is the message that will show if the expression return false,
+
+         example below:
+
+  assert maxValue >= Byte.MIN_VALUE && maxValue <= Byte.MAX_VALUE :
+                  printAssertMessage(assertFlags.BYTE_OUT_OF_RANGE);  // note that this method return string,
+                                                                      // if it return void then its compiler error.
+
+3- AutoCloseable throws Exception, NOT Throwable...
+
+class Door implements AutoCloseable{
+    @Override
+    public void close() throws Exception { // OKAY....
+
+    }
+
+//    @Override
+//    public void close() throws Throwable { // compiler error            /********* TRICKY ***********/
+//
+//    }
+}
+
+3- Tricky question, throwing exception in close method....
+
+
+class FirstCloseable implements AutoCloseable {
+    public void close() {  // Line 1
+        System.out.println("first trying to close");
+        throw new IllegalStateException("First could not close");
+    }
+
+    public void run() {
+        System.out.println("Running First");
+    }
+}
+
+class SecondCloseable implements AutoCloseable {
+    public void close() throws Exception {  // Line 2
+        System.out.println("second trying to close");
+        throw new IllegalStateException("Second could not close");
+    }
+
+    public void run() {
+        throw new IllegalStateException("Second could not run");
+    }
+}
+
+public class Test {
+
+    public static void main(String[] args) {
+
+        FirstCloseable first = new FirstCloseable();
+        try (first; SecondCloseable second = new SecondCloseable()) {  // Line 3
+            first.run();
+            second.run();
+        } catch (Exception e) { // enable debug mode and see the suppressed exceptions....
+            //System.out.println(e); // here it will orint only the first exception that has been thrown which is Second could not run
+            e.printStackTrace(System.out); // notice it will print full stack trace here
+            // in the stack trace u will see that :
+            //     Second could not run -> then it try to close second but exception thrown too Second could not close
+            // then it try to clone First but exception thrown too First could not close
+        }
+    }
+}
+
+
+
+
